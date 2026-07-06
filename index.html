@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controlo de Gastos</title>
     <style>
-        /* Estilos para deixar a interface bonita e moderna */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f4f7f6;
@@ -23,62 +22,46 @@
             width: 100%;
             max-width: 400px;
         }
-        h2 {
-            text-align: center;
-            color: #333;
-            margin-top: 0;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            color: #666;
-            font-weight: bold;
-        }
-        input, select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-sizing: border-box;
-            font-size: 14px;
-        }
-        button {
-            width: 100%;
-            padding: 12px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: background-color 0.3s;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-        #mensagem-feedback {
-            margin-top: 15px;
-            text-align: center;
-            font-size: 14px;
-            font-weight: bold;
-            min-height: 20px;
-        }
+        h2 { text-align: center; color: #333; margin-top: 0; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: #666; font-weight: bold; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
+        button { width: 100%; padding: 12px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background-color 0.3s; }
+        button:hover { background-color: #45a049; }
+        
+        /* Estilos específicos para os botões de Login e Logout */
+        #btn-login { background-color: #4285F4; } /* Cor azul do Google */
+        #btn-login:hover { background-color: #357ae8; }
+        #btn-logout { background-color: #d9534f; padding: 8px; font-size: 14px; width: auto; margin-top: 0; }
+        #btn-logout:hover { background-color: #c9302c; }
+
+        .hidden { display: none !important; }
+        .user-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+        .user-info { font-size: 14px; color: #555; }
+        #mensagem-feedback { margin-top: 15px; text-align: center; font-size: 14px; font-weight: bold; min-height: 20px; }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <h2>Adicionar Gasto</h2>
+    <div id="tela-login" class="card">
+        <h2>Controlo de Gastos</h2>
+        <p style="text-align: center; color: #666;">Faça login para gerir as suas despesas.</p>
+        <button id="btn-login">Entrar com o Google</button>
+    </div>
+
+    <div id="tela-app" class="card hidden">
+        <div class="user-header">
+            <div class="user-info">
+                Olá, <strong id="nome-usuario">...</strong>
+            </div>
+            <button id="btn-logout">Sair</button>
+        </div>
         
+        <h2>Adicionar Gasto</h2>
         <form id="form-gastos">
             <div class="form-group">
-                <label for="descricao">Descrição (ex: Supermercado)</label>
-                <input type="text" id="descricao" required placeholder="O que comprou?">
+                <label for="descricao">Descrição</label>
+                <input type="text" id="descricao" required placeholder="Ex: Supermercado">
             </div>
             
             <div class="form-group">
@@ -105,14 +88,13 @@
     </div>
 
     <script type="module">
-        // 1. Importar o núcleo do Firebase e Analytics
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-analytics.js";
-        
-        // 2. Importar as funções da base de dados (Firestore)
         import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+        
+        // 1. IMPORTANTE: Importar as ferramentas de Autenticação
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 
-        // 3. As suas credenciais exatas do Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyBUPQZjQnJRS92_8BHR4Z0bsowh1594er4",
             authDomain: "controledegastos-868d1.firebaseapp.com",
@@ -124,51 +106,94 @@
             measurementId: "G-D1D035C0GS"
         };
 
-        // 4. Inicializar os serviços do Firebase
         const app = initializeApp(firebaseConfig);
         const analytics = getAnalytics(app);
         const db = getFirestore(app);
+        
+        // 2. Inicializar a Autenticação
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
 
-        // 5. Lógica para capturar o formulário e guardar os dados
+        // Referências do HTML
+        const telaLogin = document.getElementById("tela-login");
+        const telaApp = document.getElementById("tela-app");
+        const btnLogin = document.getElementById("btn-login");
+        const btnLogout = document.getElementById("btn-logout");
+        const nomeUsuario = document.getElementById("nome-usuario");
+
+        // 3. Função de Login
+        btnLogin.addEventListener("click", async () => {
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                console.error("Erro ao fazer login:", error);
+                alert("Erro ao tentar fazer login. Verifique o console.");
+            }
+        });
+
+        // 4. Função de Logout
+        btnLogout.addEventListener("click", async () => {
+            try {
+                await signOut(auth);
+            } catch (error) {
+                console.error("Erro ao sair:", error);
+            }
+        });
+
+        // 5. Monitorar o estado do utilizador (Logado vs Deslogado)
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // Utilizador está logado: mostra o app, esconde o login
+                telaLogin.classList.add("hidden");
+                telaApp.classList.remove("hidden");
+                nomeUsuario.textContent = user.displayName.split(" ")[0]; // Pega o primeiro nome
+            } else {
+                // Utilizador NÃO está logado: mostra o login, esconde o app
+                telaApp.classList.add("hidden");
+                telaLogin.classList.remove("hidden");
+            }
+        });
+
+        // 6. Guardar Gasto (agora incluindo o ID do utilizador)
         document.getElementById("form-gastos").addEventListener("submit", async (event) => {
-            event.preventDefault(); // Evita que a página recarregue ao submeter
+            event.preventDefault(); 
+            
+            // Verifica se o utilizador está realmente logado antes de salvar
+            const user = auth.currentUser;
+            if (!user) {
+                alert("Precisa estar logado para salvar um gasto!");
+                return;
+            }
 
-            // Capturar os valores inseridos
             const inputDescricao = document.getElementById("descricao").value;
             const inputValor = parseFloat(document.getElementById("valor").value);
             const inputCategoria = document.getElementById("categoria").value;
             const mensagemFeedback = document.getElementById("mensagem-feedback");
 
             try {
-                // Mensagem de "a carregar"
                 mensagemFeedback.style.color = "blue";
-                mensagemFeedback.textContent = "A guardar registo no banco de dados...";
+                mensagemFeedback.textContent = "A guardar...";
 
-                // addDoc vai criar um documento na coleção "gastos" no seu Firestore
-                const docRef = await addDoc(collection(db, "gastos"), {
+                // Salva no banco vinculando o uid (ID único do utilizador)
+                await addDoc(collection(db, "gastos"), {
                     descricao: inputDescricao,
                     valor: inputValor,
                     categoria: inputCategoria,
-                    data_registo: new Date().toISOString() // Guarda a data e hora exata
+                    data_registo: new Date().toISOString(),
+                    usuario_id: user.uid,        // <--- NOVA LINHA: Associa o gasto a quem o criou
+                    usuario_nome: user.displayName // (Opcional) Guarda o nome também
                 });
                 
-                // Mensagem de sucesso
                 mensagemFeedback.style.color = "green";
                 mensagemFeedback.textContent = "Gasto guardado com sucesso!";
-                
-                // Limpar os campos do formulário para o próximo gasto
                 document.getElementById("form-gastos").reset();
 
-                // Fazer a mensagem de sucesso desaparecer após 4 segundos
-                setTimeout(() => {
-                    mensagemFeedback.textContent = "";
-                }, 4000);
+                setTimeout(() => { mensagemFeedback.textContent = ""; }, 4000);
                 
             } catch (error) {
-                // Mensagem de erro caso a base de dados não permita a escrita (ex: regras de segurança)
-                console.error("Erro ao guardar o documento: ", error);
+                console.error("Erro ao guardar: ", error);
                 mensagemFeedback.style.color = "red";
-                mensagemFeedback.textContent = "Ocorreu um erro ao guardar. Verifique a consola.";
+                mensagemFeedback.textContent = "Erro ao guardar. Verifique a consola.";
             }
         });
     </script>
