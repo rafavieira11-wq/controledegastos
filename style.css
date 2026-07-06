@@ -901,3 +901,82 @@ body {
         box-shadow: none !important;
     }
 }
+/* Auth Screen Components */
+.auth-screen {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: var(--bg-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    transition: opacity 0.3s ease;
+}
+
+.auth-screen:not(.active) {
+    opacity: 0;
+    pointer-events: none;
+    display: none;
+}
+
+.auth-box {
+    background: var(--card-bg);
+    padding: 40px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    width: 400px;
+    max-width: 90%;
+    border: 1px solid var(--border-color);
+}
+
+.auth-box h2 {
+    text-align: center;
+    margin-bottom: 24px;
+    color: var(--primary);
+    font-size: 24px;
+}
+
+.auth-error {
+    color: var(--danger);
+    font-size: 14px;
+    margin-bottom: 16px;
+    text-align: center;
+    font-weight: 500;
+}
+
+.auth-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.auth-actions .btn {
+    flex: 1;
+    justify-content: center;
+}
+
+.auth-box hr {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 24px 0;
+}
+
+/* Sidebar Logout Button Customization */
+.logout-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: none;
+    border: 1px solid var(--danger);
+    padding: 10px 16px;
+    width: 100%;
+    border-radius: var(--radius);
+    color: var(--danger);
+    cursor: pointer;
+    transition: var(--transition);
+    font-weight: 500;
+}
+
+.logout-action-btn:hover {
+    background-color: var(--danger-light);
+}
