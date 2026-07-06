@@ -1,201 +1,293 @@
 <!DOCTYPE html>
-<html lang="pt-PT">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controlo de Gastos</title>
+    <title>FinApp - Controle Financeiro</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f6;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
+        :root {
+            --bg-color: #f6f8fa; --card-bg: #ffffff; --text-color: #2c3e50;
+            --primary: #6c5ce7; --success: #10b981; --danger: #ef4444; --info: #3b82f6;
+            --border-color: #e2e8f0; --radius: 12px; --transition: all 0.3s ease;
         }
-        .card {
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            width: 100%;
-            max-width: 400px;
-        }
-        h2 { text-align: center; color: #333; margin-top: 0; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; color: #666; font-weight: bold; }
-        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
-        button { width: 100%; padding: 12px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background-color 0.3s; }
-        button:hover { background-color: #45a049; }
-        
-        /* Estilos específicos para os botões de Login e Logout */
-        #btn-login { background-color: #4285F4; } /* Cor azul do Google */
-        #btn-login:hover { background-color: #357ae8; }
-        #btn-logout { background-color: #d9534f; padding: 8px; font-size: 14px; width: auto; margin-top: 0; }
-        #btn-logout:hover { background-color: #c9302c; }
 
+        [data-theme="dark"] {
+            --bg-color: #0f172a; --card-bg: #1e293b; --text-color: #f1f5f9; --border-color: #334155;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-color); transition: var(--transition); }
+
+        /* TELA DE LOGIN */
+        #login-screen {
+            height: 100vh; display: flex; justify-content: center; align-items: center;
+            background: linear-gradient(135deg, #6c5ce7, #a855f7);
+        }
+        .login-card {
+            background: white; padding: 40px; border-radius: var(--radius); text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 400px;
+        }
+        .login-card i { font-size: 50px; color: var(--primary); margin-bottom: 20px; }
+        .btn-google {
+            background: #4285F4; color: white; border: none; padding: 12px 20px;
+            border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%;
+            display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 16px;
+        }
+
+        /* ESTRUTURA DO APP (SIDEBAR + CONTEÚDO) */
+        .app-container { display: flex; min-height: 100vh; }
+        .sidebar {
+            width: 260px; background: var(--card-bg); border-right: 1px solid var(--border-color);
+            padding: 30px 20px; display: flex; flex-direction: column;
+        }
+        .main-content { flex: 1; padding: 30px 40px; }
         .hidden { display: none !important; }
-        .user-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
-        .user-info { font-size: 14px; color: #555; }
-        #mensagem-feedback { margin-top: 15px; text-align: center; font-size: 14px; font-weight: bold; min-height: 20px; }
+
+        /* DASHBOARD CARDS */
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .card {
+            background: var(--card-bg); padding: 20px; border-radius: var(--radius);
+            border: 1px solid var(--border-color); display: flex; align-items: center; gap: 15px;
+        }
+        .card-icon { width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; }
+        .card-info h3 { font-size: 13px; color: #7f8c8d; }
+        .card-info p { font-size: 20px; font-weight: bold; }
+
+        .card-blue { border-top: 4px solid var(--info); }
+        .card-green { border-top: 4px solid var(--success); }
+        .card-red { border-top: 4px solid var(--danger); }
+
+        /* FORMULÁRIO E TABELA */
+        .content-block { background: var(--card-bg); padding: 20px; border-radius: var(--radius); border: 1px solid var(--border-color); margin-bottom: 20px; }
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 15px; }
+        input, select, button { padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; }
+        .btn-add { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { text-align: left; padding: 12px; color: #7f8c8d; border-bottom: 2px solid var(--border-color); }
+        td { padding: 12px; border-bottom: 1px solid var(--border-color); }
+
+        .btn-logout { background: none; border: 1px solid var(--danger); color: var(--danger); padding: 5px 10px; cursor: pointer; border-radius: 5px; }
+        .user-profile { display: flex; align-items: center; gap: 10px; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); }
+        .user-profile img { width: 40px; height: 40px; border-radius: 50%; }
+
+        /* GRÁFICOS */
+        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        canvas { max-height: 250px; }
     </style>
 </head>
 <body>
 
-    <div id="tela-login" class="card">
-        <h2>Controlo de Gastos</h2>
-        <p style="text-align: center; color: #666;">Faça login para gerir as suas despesas.</p>
-        <button id="btn-login">Entrar com o Google</button>
+    <div id="login-screen">
+        <div class="login-card">
+            <i class="fas fa-wallet"></i>
+            <h2>Bem-vindo ao FinApp</h2>
+            <p style="margin-bottom: 20px; color: #666;">Organize as suas finanças agora.</p>
+            <button class="btn-google" id="btn-login">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="20">
+                Entrar com o Google
+            </button>
+        </div>
     </div>
 
-    <div id="tela-app" class="card hidden">
-        <div class="user-header">
-            <div class="user-info">
-                Olá, <strong id="nome-usuario">...</strong>
+    <div id="main-app" class="app-container hidden">
+        <aside class="sidebar">
+            <div class="user-profile">
+                <img id="user-photo" src="" alt="">
+                <div>
+                    <p style="font-weight: bold; font-size: 14px;" id="user-name"></p>
+                    <button class="btn-logout" id="btn-logout">Sair</button>
+                </div>
             </div>
-            <button id="btn-logout">Sair</button>
-        </div>
-        
-        <h2>Adicionar Gasto</h2>
-        <form id="form-gastos">
-            <div class="form-group">
-                <label for="descricao">Descrição</label>
-                <input type="text" id="descricao" required placeholder="Ex: Supermercado">
-            </div>
-            
-            <div class="form-group">
-                <label for="valor">Valor (€)</label>
-                <input type="number" id="valor" step="0.01" required placeholder="0.00">
+            <nav style="display: flex; flex-direction: column; gap: 10px;">
+                <p style="color: var(--primary); font-weight: bold;"><i class="fas fa-chart-pie"></i> Dashboard</p>
+                <p><i class="fas fa-list"></i> Histórico</p>
+                <p id="theme-toggle" style="cursor: pointer;"><i class="fas fa-moon"></i> Modo Escuro</p>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header style="margin-bottom: 30px;">
+                <h1>Resumo Financeiro</h1>
+                <p id="current-date" style="color: #7f8c8d;"></p>
+            </header>
+
+            <div class="cards-grid">
+                <div class="card card-blue">
+                    <div class="card-icon" style="background: #eff6ff; color: #3b82f6;"><i class="fas fa-scale-balanced"></i></div>
+                    <div class="card-info"><h3>Saldo Atual</h3><p id="val-saldo">R$ 0,00</p></div>
+                </div>
+                <div class="card card-green">
+                    <div class="card-icon" style="background: #e6fdf5; color: #10b981;"><i class="fas fa-arrow-up"></i></div>
+                    <div class="card-info"><h3>Receitas</h3><p id="val-receitas">R$ 0,00</p></div>
+                </div>
+                <div class="card card-red">
+                    <div class="card-icon" style="background: #fef2f2; color: #ef4444;"><i class="fas fa-arrow-down"></i></div>
+                    <div class="card-info"><h3>Despesas</h3><p id="val-despesas">R$ 0,00</p></div>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label for="categoria">Categoria</label>
-                <select id="categoria" required>
-                    <option value="" disabled selected>Escolha uma categoria...</option>
-                    <option value="Alimentação">Alimentação</option>
-                    <option value="Transporte">Transporte</option>
-                    <option value="Lazer">Lazer</option>
-                    <option value="Saúde">Saúde</option>
-                    <option value="Outros">Outros</option>
-                </select>
+            <div class="content-block">
+                <h3>Novo Lançamento</h3>
+                <form id="form-gastos" class="form-row">
+                    <input type="text" id="desc" placeholder="Descrição" required>
+                    <input type="number" id="valor" step="0.01" placeholder="Valor" required>
+                    <select id="cat">
+                        <option value="Alimentação">Alimentação</option>
+                        <option value="Transporte">Transporte</option>
+                        <option value="Lazer">Lazer</option>
+                        <option value="Saúde">Saúde</option>
+                        <option value="Outros">Outros</option>
+                    </select>
+                    <select id="tipo">
+                        <option value="receita">Receita</option>
+                        <option value="despesa" selected>Despesa</option>
+                    </select>
+                    <button type="submit" class="btn-add">Adicionar</button>
+                </form>
             </div>
 
-            <button type="submit">Guardar Gasto</button>
-        </form>
+            <div class="charts-grid">
+                <div class="content-block"><h3>Gastos por Categoria</h3><canvas id="chartCat"></canvas></div>
+                <div class="content-block"><h3>Histórico Mensal</h3><canvas id="chartMes"></canvas></div>
+            </div>
 
-        <div id="mensagem-feedback"></div>
+            <div class="content-block">
+                <h3>Últimas Movimentações</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Descrição</th>
+                            <th>Categoria</th>
+                            <th>Valor</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body"></tbody>
+                </table>
+            </div>
+        </main>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-analytics.js";
-        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
-        
-        // 1. IMPORTANTE: Importar as ferramentas de Autenticação
+        import { getFirestore, collection, addDoc, query, where, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBUPQZjQnJRS92_8BHR4Z0bsowh1594er4",
             authDomain: "controledegastos-868d1.firebaseapp.com",
-            databaseURL: "https://controledegastos-868d1-default-rtdb.firebaseio.com",
             projectId: "controledegastos-868d1",
             storageBucket: "controledegastos-868d1.firebasestorage.app",
             messagingSenderId: "607224476147",
-            appId: "1:607224476147:web:816fe74757adce82542286",
-            measurementId: "G-D1D035C0GS"
+            appId: "1:607224476147:web:816fe74757adce82542286"
         };
 
         const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
         const db = getFirestore(app);
-        
-        // 2. Inicializar a Autenticação
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
 
-        // Referências do HTML
-        const telaLogin = document.getElementById("tela-login");
-        const telaApp = document.getElementById("tela-app");
-        const btnLogin = document.getElementById("btn-login");
-        const btnLogout = document.getElementById("btn-logout");
-        const nomeUsuario = document.getElementById("nome-usuario");
+        // ELEMENTOS UI
+        const loginScreen = document.getElementById('login-screen');
+        const mainApp = document.getElementById('main-app');
+        const btnLogin = document.getElementById('btn-login');
+        const btnLogout = document.getElementById('btn-logout');
 
-        // 3. Função de Login
-        btnLogin.addEventListener("click", async () => {
-            try {
-                await signInWithPopup(auth, provider);
-            } catch (error) {
-                console.error("Erro ao fazer login:", error);
-                alert("Erro ao tentar fazer login. Verifique o console.");
-            }
-        });
+        // LOGIN / LOGOUT
+        btnLogin.onclick = () => signInWithPopup(auth, provider);
+        btnLogout.onclick = () => signOut(auth);
 
-        // 4. Função de Logout
-        btnLogout.addEventListener("click", async () => {
-            try {
-                await signOut(auth);
-            } catch (error) {
-                console.error("Erro ao sair:", error);
-            }
-        });
-
-        // 5. Monitorar o estado do utilizador (Logado vs Deslogado)
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // Utilizador está logado: mostra o app, esconde o login
-                telaLogin.classList.add("hidden");
-                telaApp.classList.remove("hidden");
-                nomeUsuario.textContent = user.displayName.split(" ")[0]; // Pega o primeiro nome
+                loginScreen.classList.add('hidden');
+                mainApp.classList.remove('hidden');
+                document.getElementById('user-name').textContent = user.displayName;
+                document.getElementById('user-photo').src = user.photoURL;
+                ouvirDados(user.uid);
             } else {
-                // Utilizador NÃO está logado: mostra o login, esconde o app
-                telaApp.classList.add("hidden");
-                telaLogin.classList.remove("hidden");
+                mainApp.classList.add('hidden');
+                loginScreen.classList.remove('hidden');
             }
         });
 
-        // 6. Guardar Gasto (agora incluindo o ID do utilizador)
-        document.getElementById("form-gastos").addEventListener("submit", async (event) => {
-            event.preventDefault(); 
-            
-            // Verifica se o utilizador está realmente logado antes de salvar
+        // SALVAR DADOS
+        document.getElementById('form-gastos').onsubmit = async (e) => {
+            e.preventDefault();
             const user = auth.currentUser;
-            if (!user) {
-                alert("Precisa estar logado para salvar um gasto!");
-                return;
-            }
+            await addDoc(collection(db, "movimentacoes"), {
+                uid: user.uid,
+                desc: document.getElementById('desc').value,
+                valor: parseFloat(document.getElementById('valor').value),
+                cat: document.getElementById('cat').value,
+                tipo: document.getElementById('tipo').value,
+                data: new Date().toISOString()
+            });
+            e.target.reset();
+        };
 
-            const inputDescricao = document.getElementById("descricao").value;
-            const inputValor = parseFloat(document.getElementById("valor").value);
-            const inputCategoria = document.getElementById("categoria").value;
-            const mensagemFeedback = document.getElementById("mensagem-feedback");
+        // OUVIR DADOS EM TEMPO REAL E ATUALIZAR INTERFACE
+        let myChart;
+        function ouvirDados(uid) {
+            const q = query(collection(db, "movimentacoes"), where("uid", "==", uid));
+            onSnapshot(q, (snapshot) => {
+                let html = '';
+                let totalRec = 0, totalDes = 0;
+                let cats = {};
 
-            try {
-                mensagemFeedback.style.color = "blue";
-                mensagemFeedback.textContent = "A guardar...";
+                snapshot.forEach((docSnap) => {
+                    const d = docSnap.data();
+                    const id = docSnap.id;
+                    if (d.tipo === 'receita') totalRec += d.valor;
+                    else {
+                        totalDes += d.valor;
+                        cats[d.cat] = (cats[d.cat] || 0) + d.valor;
+                    }
 
-                // Salva no banco vinculando o uid (ID único do utilizador)
-                await addDoc(collection(db, "gastos"), {
-                    descricao: inputDescricao,
-                    valor: inputValor,
-                    categoria: inputCategoria,
-                    data_registo: new Date().toISOString(),
-                    usuario_id: user.uid,        // <--- NOVA LINHA: Associa o gasto a quem o criou
-                    usuario_nome: user.displayName // (Opcional) Guarda o nome também
+                    html += `<tr>
+                        <td>${d.desc}</td>
+                        <td>${d.cat}</td>
+                        <td style="color: ${d.tipo === 'receita' ? 'green' : 'red'}">R$ ${d.valor.toFixed(2)}</td>
+                        <td><i class="fas fa-trash" style="cursor:pointer;color:red" onclick="window.deletarDoc('${id}')"></i></td>
+                    </tr>`;
                 });
-                
-                mensagemFeedback.style.color = "green";
-                mensagemFeedback.textContent = "Gasto guardado com sucesso!";
-                document.getElementById("form-gastos").reset();
 
-                setTimeout(() => { mensagemFeedback.textContent = ""; }, 4000);
+                document.getElementById('table-body').innerHTML = html;
+                document.getElementById('val-receitas').textContent = `R$ ${totalRec.toFixed(2)}`;
+                document.getElementById('val-despesas').textContent = `R$ ${totalDes.toFixed(2)}`;
+                document.getElementById('val-saldo').textContent = `R$ ${(totalRec - totalDes).toFixed(2)}`;
                 
-            } catch (error) {
-                console.error("Erro ao guardar: ", error);
-                mensagemFeedback.style.color = "red";
-                mensagemFeedback.textContent = "Erro ao guardar. Verifique a consola.";
-            }
-        });
+                atualizarGrafico(cats);
+            });
+        }
+
+        window.deletarDoc = async (id) => {
+            if(confirm("Excluir este lançamento?")) await deleteDoc(doc(db, "movimentacoes", id));
+        };
+
+        function atualizarGrafico(cats) {
+            const ctx = document.getElementById('chartCat').getContext('2d');
+            if (myChart) myChart.destroy();
+            myChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(cats),
+                    datasets: [{ data: Object.values(cats), backgroundColor: ['#6c5ce7', '#10b981', '#ef4444', '#3b82f6', '#f1c40f'] }]
+                },
+                options: { plugins: { legend: { position: 'bottom' } } }
+            });
+        }
+
+        // TEMA ESCURO
+        document.getElementById('theme-toggle').onclick = () => {
+            const body = document.body;
+            const isDark = body.getAttribute('data-theme') === 'dark';
+            body.setAttribute('data-theme', isDark ? 'light' : 'dark');
+        };
     </script>
 </body>
 </html>
