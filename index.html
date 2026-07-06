@@ -3,292 +3,373 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FinApp - Controle Financeiro</title>
+    <title>FinançasPessoais - Controle Financeiro</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    
-    <style>
-        :root {
-            --bg-color: #f6f8fa; --card-bg: #ffffff; --text-color: #2c3e50;
-            --primary: #6c5ce7; --success: #10b981; --danger: #ef4444; --info: #3b82f6;
-            --border-color: #e2e8f0; --radius: 12px; --transition: all 0.3s ease;
-        }
-
-        [data-theme="dark"] {
-            --bg-color: #0f172a; --card-bg: #1e293b; --text-color: #f1f5f9; --border-color: #334155;
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-color); transition: var(--transition); }
-
-        /* TELA DE LOGIN */
-        #login-screen {
-            height: 100vh; display: flex; justify-content: center; align-items: center;
-            background: linear-gradient(135deg, #6c5ce7, #a855f7);
-        }
-        .login-card {
-            background: white; padding: 40px; border-radius: var(--radius); text-align: center;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 400px;
-        }
-        .login-card i { font-size: 50px; color: var(--primary); margin-bottom: 20px; }
-        .btn-google {
-            background: #4285F4; color: white; border: none; padding: 12px 20px;
-            border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%;
-            display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 16px;
-        }
-
-        /* ESTRUTURA DO APP (SIDEBAR + CONTEÚDO) */
-        .app-container { display: flex; min-height: 100vh; }
-        .sidebar {
-            width: 260px; background: var(--card-bg); border-right: 1px solid var(--border-color);
-            padding: 30px 20px; display: flex; flex-direction: column;
-        }
-        .main-content { flex: 1; padding: 30px 40px; }
-        .hidden { display: none !important; }
-
-        /* DASHBOARD CARDS */
-        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .card {
-            background: var(--card-bg); padding: 20px; border-radius: var(--radius);
-            border: 1px solid var(--border-color); display: flex; align-items: center; gap: 15px;
-        }
-        .card-icon { width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; }
-        .card-info h3 { font-size: 13px; color: #7f8c8d; }
-        .card-info p { font-size: 20px; font-weight: bold; }
-
-        .card-blue { border-top: 4px solid var(--info); }
-        .card-green { border-top: 4px solid var(--success); }
-        .card-red { border-top: 4px solid var(--danger); }
-
-        /* FORMULÁRIO E TABELA */
-        .content-block { background: var(--card-bg); padding: 20px; border-radius: var(--radius); border: 1px solid var(--border-color); margin-bottom: 20px; }
-        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 15px; }
-        input, select, button { padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; }
-        .btn-add { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { text-align: left; padding: 12px; color: #7f8c8d; border-bottom: 2px solid var(--border-color); }
-        td { padding: 12px; border-bottom: 1px solid var(--border-color); }
-
-        .btn-logout { background: none; border: 1px solid var(--danger); color: var(--danger); padding: 5px 10px; cursor: pointer; border-radius: 5px; }
-        .user-profile { display: flex; align-items: center; gap: 10px; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); }
-        .user-profile img { width: 40px; height: 40px; border-radius: 50%; }
-
-        /* GRÁFICOS */
-        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        canvas { max-height: 250px; }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-theme="light">
 
-    <div id="login-screen">
-        <div class="login-card">
-            <i class="fas fa-wallet"></i>
-            <h2>Bem-vindo ao FinApp</h2>
-            <p style="margin-bottom: 20px; color: #666;">Organize as suas finanças agora.</p>
-            <button class="btn-google" id="btn-login">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="20">
-                Entrar com o Google
+    <div id="auth-screen" class="auth-screen active">
+        <div class="auth-box">
+            <h2><i class="fas fa-wallet"></i> FinApp Login</h2>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="auth-email" placeholder="seu@email.com">
+            </div>
+            <div class="form-group">
+                <label>Senha</label>
+                <input type="password" id="auth-password" placeholder="Sua senha">
+            </div>
+            <div id="auth-error" class="auth-error"></div>
+            <div class="auth-actions">
+                <button class="btn btn-primary" id="btn-login">Entrar</button>
+                <button class="btn btn-secondary" id="btn-register">Cadastrar</button>
+            </div>
+            <hr>
+            <button class="btn btn-secondary" style="width:100%" id="btn-google">
+                <i class="fab fa-google"></i> Entrar com Google
             </button>
         </div>
     </div>
-
-    <div id="main-app" class="app-container hidden">
+    
+    <div class="app-container" id="app-container" style="display: none;">
         <aside class="sidebar">
-            <div class="user-profile">
-                <img id="user-photo" src="" alt="">
-                <div>
-                    <p style="font-weight: bold; font-size: 14px;" id="user-name"></p>
-                    <button class="btn-logout" id="btn-logout">Sair</button>
-                </div>
+            <div class="logo">
+                <i class="fas fa-wallet"></i>
+                <h2>FinApp</h2>
             </div>
-            <nav style="display: flex; flex-direction: column; gap: 10px;">
-                <p style="color: var(--primary); font-weight: bold;"><i class="fas fa-chart-pie"></i> Dashboard</p>
-                <p><i class="fas fa-list"></i> Histórico</p>
-                <p id="theme-toggle" style="cursor: pointer;"><i class="fas fa-moon"></i> Modo Escuro</p>
+            <nav class="menu">
+                <button class="menu-btn active" data-tab="dashboard">
+                    <i class="fas fa-chart-pie"></i> Dashboard
+                </button>
+                <button class="menu-btn" data-tab="transactions">
+                    <i class="fas fa-list-ul"></i> Movimentações
+                </button>
+                <button class="menu-btn" data-tab="calendar-tab">
+                    <i class="fas fa-calendar-alt"></i> Calendário
+                </button>
+                <button class="menu-btn" data-tab="settings">
+                    <i class="fas fa-cog"></i> Configurações
+                </button>
             </nav>
+            <div class="theme-toggle-container">
+                <button id="theme-toggle-btn" style="margin-bottom: 12px;">
+                    <i class="fas fa-moon"></i> <span>Modo Escuro</span>
+                </button>
+                <button id="logout-btn" class="logout-action-btn">
+                    <i class="fas fa-sign-out-alt"></i> <span>Sair da Conta</span>
+                </button>
+            </div>
         </aside>
 
         <main class="main-content">
-            <header style="margin-bottom: 30px;">
-                <h1>Resumo Financeiro</h1>
-                <p id="current-date" style="color: #7f8c8d;"></p>
+            <header class="top-navbar">
+                <div class="welcome-text">
+                    <h1>Olá, <span id="user-display-name">Usuário</span>!</h1>
+                    <p>Seja bem-vindo ao seu controle financeiro.</p>
+                </div>
+                <div class="top-actions">
+                    <div class="notifications-panel" id="notifications-panel">
+                        <button class="notif-btn" id="notif-btn">
+                            <i class="fas fa-bell"></i>
+                            <span class="badge" id="notif-badge">0</span>
+                        </button>
+                        <div class="notif-dropdown" id="notif-dropdown">
+                            <h4>Alertas e Avisos</h4>
+                            <ul id="notif-list">
+                                <li class="empty-notif">Nenhum alerta pendente</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" id="open-modal-btn">
+                        <i class="fas fa-plus"></i> Novo Lançamento
+                    </button>
+                </div>
             </header>
 
-            <div class="cards-grid">
-                <div class="card card-blue">
-                    <div class="card-icon" style="background: #eff6ff; color: #3b82f6;"><i class="fas fa-scale-balanced"></i></div>
-                    <div class="card-info"><h3>Saldo Atual</h3><p id="val-saldo">R$ 0,00</p></div>
-                </div>
-                <div class="card card-green">
-                    <div class="card-icon" style="background: #e6fdf5; color: #10b981;"><i class="fas fa-arrow-up"></i></div>
-                    <div class="card-info"><h3>Receitas</h3><p id="val-receitas">R$ 0,00</p></div>
-                </div>
-                <div class="card card-red">
-                    <div class="card-icon" style="background: #fef2f2; color: #ef4444;"><i class="fas fa-arrow-down"></i></div>
-                    <div class="card-info"><h3>Despesas</h3><p id="val-despesas">R$ 0,00</p></div>
-                </div>
-            </div>
+            <div id="alerts-banner-container"></div>
 
-            <div class="content-block">
-                <h3>Novo Lançamento</h3>
-                <form id="form-gastos" class="form-row">
-                    <input type="text" id="desc" placeholder="Descrição" required>
-                    <input type="number" id="valor" step="0.01" placeholder="Valor" required>
-                    <select id="cat">
-                        <option value="Alimentação">Alimentação</option>
-                        <option value="Transporte">Transporte</option>
-                        <option value="Lazer">Lazer</option>
-                        <option value="Saúde">Saúde</option>
-                        <option value="Outros">Outros</option>
-                    </select>
-                    <select id="tipo">
-                        <option value="receita">Receita</option>
-                        <option value="despesa" selected>Despesa</option>
-                    </select>
-                    <button type="submit" class="btn-add">Adicionar</button>
-                </form>
-            </div>
+            <section id="dashboard" class="tab-content active">
+                <div class="cards-grid">
+                    <div class="card card-blue">
+                        <div class="card-icon"><i class="fas fa-scale-balanced"></i></div>
+                        <div class="card-info">
+                            <h3>Saldo Atual</h3>
+                            <p class="amount" id="balance-val">R$ 0,00</p>
+                        </div>
+                    </div>
+                    <div class="card card-green">
+                        <div class="card-icon"><i class="fas fa-arrow-trend-up"></i></div>
+                        <div class="card-info">
+                            <h3>Receitas do Mês</h3>
+                            <p class="amount" id="income-val">R$ 0,00</p>
+                        </div>
+                    </div>
+                    <div class="card card-red">
+                        <div class="card-icon"><i class="fas fa-arrow-trend-down"></i></div>
+                        <div class="card-info">
+                            <h3>Despesas do Mês</h3>
+                            <p class="amount" id="expense-val">R$ 0,00</p>
+                        </div>
+                    </div>
+                    <div class="card card-purple">
+                        <div class="card-icon"><i class="fas fa-chart-line"></i></div>
+                        <div class="card-info">
+                            <h3>Previsão do Mês</h3>
+                            <p class="amount" id="forecast-val">R$ 0,00</p>
+                        </div>
+                    </div>
+                </div>
 
-            <div class="charts-grid">
-                <div class="content-block"><h3>Gastos por Categoria</h3><canvas id="chartCat"></canvas></div>
-                <div class="content-block"><h3>Histórico Mensal</h3><canvas id="chartMes"></canvas></div>
-            </div>
+                <div class="dashboard-row">
+                    <div class="content-block goal-block">
+                        <h3><i class="fas fa-bullseye"></i> Meta de Economia Mensal</h3>
+                        <div class="goal-info">
+                            <span id="goal-progress-text">Gasto Atual: R$ 0,00 / Meta: R$ 0,00</span>
+                            <span id="goal-percent">0%</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="goal-progress-bar"></div>
+                        </div>
+                        <p class="subtext" id="goal-status-desc">Defina uma meta na aba de configurações.</p>
+                    </div>
+                </div>
 
-            <div class="content-block">
-                <h3>Últimas Movimentações</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Descrição</th>
-                            <th>Categoria</th>
-                            <th>Valor</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="table-body"></tbody>
-                </table>
-            </div>
+                <div class="charts-grid">
+                    <div class="content-block chart-container">
+                        <h3><i class="fas fa-chart-pie"></i> Gastos por Categoria</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="content-block chart-container">
+                        <h3><i class="fas fa-chart-bar"></i> Receitas vs Despesas por Mês</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="monthlyChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="content-block chart-container full-width-chart">
+                        <h3><i class="fas fa-chart-area"></i> Evolução do Saldo</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="evolutionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="transactions" class="tab-content">
+                <div class="content-block">
+                    <div class="block-header">
+                        <h2><i class="fas fa-exchange-alt"></i> Histórico de Lançamentos</h2>
+                        <div class="export-actions">
+                            <button class="btn btn-secondary btn-sm" id="export-csv-btn"><i class="fas fa-file-csv"></i> CSV</button>
+                            <button class="btn btn-secondary btn-sm" id="export-pdf-btn"><i class="fas fa-file-pdf"></i> PDF</button>
+                            <label for="import-csv" class="btn btn-secondary btn-sm cursor-pointer">
+                                <i class="fas fa-file-import"></i> Importar CSV
+                            </label>
+                            <input type="file" id="import-csv" accept=".csv" style="display: none;">
+                        </div>
+                    </div>
+
+                    <div class="filters-panel">
+                        <div class="filter-group search-group">
+                            <i class="fas fa-search search-icon"></i>
+                            <input type="text" id="filter-search" placeholder="Pesquisar por descrição...">
+                        </div>
+                        <div class="filter-group">
+                            <select id="filter-period">
+                                <option value="all">Todo o Período</option>
+                                <option value="current-month" selected>Mês Atual</option>
+                                <option value="last-30">Últimos 30 dias</option>
+                                <option value="future">Lançamentos Futuros</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <select id="filter-type">
+                                <option value="all">Todos os Tipos</option>
+                                <option value="receita">Receitas</option>
+                                <option value="despesa">Despesas</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <select id="filter-category">
+                                <option value="all">Todas Categorias</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <select id="filter-status">
+                                <option value="all">Todos Status</option>
+                                <option value="pago">Pago / Recebido</option>
+                                <option value="pendente">Pendente</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive" id="pdf-table-area">
+                        <table class="transactions-table">
+                            <thead>
+                                <tr>
+                                    <th id="sort-date" class="sortable">Data <i class="fas fa-sort"></i></th>
+                                    <th>Tipo</th>
+                                    <th>Descrição</th>
+                                    <th>Categoria</th>
+                                    <th>Valor</th>
+                                    <th>Status</th>
+                                    <th class="no-print">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactions-list-body">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="calendar-tab" class="tab-content">
+                <div class="calendar-container content-block">
+                    <div class="calendar-header">
+                        <button class="btn btn-icon" id="prev-month-btn"><i class="fas fa-chevron-left"></i></button>
+                        <h2 id="calendar-month-year">Janeiro 2026</h2>
+                        <button class="btn btn-icon" id="next-month-btn"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                    <div class="calendar-grid-header">
+                        <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+                    </div>
+                    <div class="calendar-grid-days" id="calendar-days">
+                        </div>
+                </div>
+
+                <div class="content-block" id="day-details-panel" style="display: none; margin-top: 20px;">
+                    <div class="block-header">
+                        <h3>Lançamentos do dia <span id="selected-date-display">--/--/----</span></h3>
+                        <button class="btn btn-sm btn-secondary" onclick="document.getElementById('day-details-panel').style.display='none'">Fechar</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="transactions-table">
+                            <thead>
+                                <tr>
+                                    <th>Tipo</th>
+                                    <th>Descrição</th>
+                                    <th>Categoria</th>
+                                    <th>Valor</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="day-transactions-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="settings" class="tab-content">
+                <div class="content-block settings-form">
+                    <h2><i class="fas fa-sliders"></i> Ajustes do Sistema</h2>
+                    <hr>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="set-username">Nome do Usuário</label>
+                            <input type="text" id="set-username" placeholder="Seu Nome">
+                        </div>
+                        <div class="form-group">
+                            <label for="set-currency">Moeda Padrão</label>
+                            <select id="set-currency">
+                                <option value="BRL">Real (R$)</option>
+                                <option value="USD">Dólar ($)</option>
+                                <option value="EUR">Euro (€)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="set-initial-balance">Saldo Inicial</label>
+                            <input type="number" id="set-initial-balance" step="0.01" placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label for="set-monthly-goal">Meta de Gastos Mensais</label>
+                            <input type="number" id="set-monthly-goal" step="0.01" placeholder="Ex: 4000.00">
+                        </div>
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <button class="btn btn-primary" id="save-settings-btn"><i class="fas fa-save"></i> Salvar Configurações</button>
+                        <button class="btn btn-secondary" id="clear-data-btn" style="background-color: var(--danger); color: white;"><i class="fas fa-trash-can"></i> Limpar Meus Dados</button>
+                    </div>
+                </div>
+            </section>
         </main>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, query, where, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
-
-        // CONFIGURAÇÕES EXATAS DO SEU BANCO DE DADOS FIREBASE
-        const firebaseConfig = {
-            apiKey: "AIzaSyBUPQZjQnJRS92_8BHR4Z0bsowh1594er4",
-            authDomain: "controledegastos-868d1.firebaseapp.com",
-            projectId: "controledegastos-868d1",
-            storageBucket: "controledegastos-868d1.firebasestorage.app",
-            messagingSenderId: "607224476147",
-            appId: "1:607224476147:web:816fe74757adce82542286"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-        const provider = new GoogleAuthProvider();
-
-        // ELEMENTOS UI
-        const loginScreen = document.getElementById('login-screen');
-        const mainApp = document.getElementById('main-app');
-        const btnLogin = document.getElementById('btn-login');
-        const btnLogout = document.getElementById('btn-logout');
-
-        // LOGIN / LOGOUT
-        btnLogin.onclick = () => signInWithPopup(auth, provider);
-        btnLogout.onclick = () => signOut(auth);
-
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                loginScreen.classList.add('hidden');
-                mainApp.classList.remove('hidden');
-                document.getElementById('user-name').textContent = user.displayName;
-                document.getElementById('user-photo').src = user.photoURL;
-                ouvirDados(user.uid);
-            } else {
-                mainApp.classList.add('hidden');
-                loginScreen.classList.remove('hidden');
-            }
-        });
-
-        // SALVAR DADOS
-        document.getElementById('form-gastos').onsubmit = async (e) => {
-            e.preventDefault();
-            const user = auth.currentUser;
-            await addDoc(collection(db, "movimentacoes"), {
-                uid: user.uid,
-                desc: document.getElementById('desc').value,
-                valor: parseFloat(document.getElementById('valor').value),
-                cat: document.getElementById('cat').value,
-                tipo: document.getElementById('tipo').value,
-                data: new Date().toISOString()
-            });
-            e.target.reset();
-        };
-
-        // OUVIR DADOS EM TEMPO REAL E ATUALIZAR INTERFACE
-        let myChart;
-        function ouvirDados(uid) {
-            const q = query(collection(db, "movimentacoes"), where("uid", "==", uid));
-            onSnapshot(q, (snapshot) => {
-                let html = '';
-                let totalRec = 0, totalDes = 0;
-                let cats = {};
-
-                snapshot.forEach((docSnap) => {
-                    const d = docSnap.data();
-                    const id = docSnap.id;
-                    if (d.tipo === 'receita') totalRec += d.valor;
-                    else {
-                        totalDes += d.valor;
-                        cats[d.cat] = (cats[d.cat] || 0) + d.valor;
-                    }
-
-                    html += `<tr>
-                        <td>${d.desc}</td>
-                        <td>${d.cat}</td>
-                        <td style="color: ${d.tipo === 'receita' ? 'green' : 'red'}">R$ ${d.valor.toFixed(2)}</td>
-                        <td><i class="fas fa-trash" style="cursor:pointer;color:red" onclick="window.deletarDoc('${id}')"></i></td>
-                    </tr>`;
-                });
-
-                document.getElementById('table-body').innerHTML = html;
-                document.getElementById('val-receitas').textContent = `R$ ${totalRec.toFixed(2)}`;
-                document.getElementById('val-despesas').textContent = `R$ ${totalDes.toFixed(2)}`;
-                document.getElementById('val-saldo').textContent = `R$ ${(totalRec - totalDes).toFixed(2)}`;
+    <div class="modal-overlay" id="transaction-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 id="modal-title">Novo Lançamento</h3>
+                <button class="close-modal" id="close-modal-btn"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="transaction-form">
+                <input type="hidden" id="edit-index" value="">
                 
-                atualizarGrafico(cats);
-            });
-        }
+                <div class="form-group">
+                    <label>Tipo de Movimentação</label>
+                    <div class="radio-toggle">
+                        <label class="radio-label">
+                            <input type="radio" name="type" value="receita" checked id="radio-income">
+                            <span class="radio-custom income-select"><i class="fas fa-arrow-trend-up"></i> Receita</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="type" value="despesa" id="radio-expense">
+                            <span class="radio-custom expense-select"><i class="fas fa-arrow-trend-down"></i> Despesa</span>
+                        </label>
+                    </div>
+                </div>
 
-        window.deletarDoc = async (id) => {
-            if(confirm("Excluir este lançamento?")) await deleteDoc(doc(db, "movimentacoes", id));
-        };
+                <div class="form-group">
+                    <label for="tx-description">Descrição</label>
+                    <input type="text" id="tx-description" required placeholder="Ex: Salário, Supermercado...">
+                </div>
 
-        function atualizarGrafico(cats) {
-            const ctx = document.getElementById('chartCat').getContext('2d');
-            if (myChart) myChart.destroy();
-            myChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(cats),
-                    datasets: [{ data: Object.values(cats), backgroundColor: ['#6c5ce7', '#10b981', '#ef4444', '#3b82f6', '#f1c40f'] }]
-                },
-                options: { plugins: { legend: { position: 'bottom' } } }
-            });
-        }
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="tx-value">Valor</label>
+                        <input type="number" id="tx-value" step="0.01" min="0.01" required placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label for="tx-date">Data</label>
+                        <input type="date" id="tx-date" required>
+                    </div>
+                </div>
 
-        // TEMA ESCURO
-        document.getElementById('theme-toggle').onclick = () => {
-            const body = document.body;
-            const isDark = body.getAttribute('data-theme') === 'dark';
-            body.setAttribute('data-theme', isDark ? 'light' : 'dark');
-        };
-    </script>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="tx-category">Categoria</label>
+                        <input type="text" id="tx-category" required list="categories-suggest" placeholder="Ex: Alimentação, Lazer, Salário...">
+                        <datalist id="categories-suggest">
+                            <option value="Alimentação">
+                            <option value="Moradia">
+                            <option value="Transporte">
+                            <option value="Lazer">
+                            <option value="Saúde">
+                            <option value="Educação">
+                            <option value="Salário">
+                            <option value="Investimentos">
+                            <option value="Outros">
+                        </datalist>
+                    </div>
+                    <div class="form-group">
+                        <label for="tx-status">Status</label>
+                        <select id="tx-status">
+                            <option value="pago">Pago / Recebido</option>
+                            <option value="pendente">Pendente</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancel-modal-btn">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="save-tx-btn">Confirmar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="script.js"></script>
 </body>
 </html>
