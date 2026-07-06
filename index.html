@@ -1,369 +1,176 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-PT">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FinançasPessoais - Controle Financeiro</title>
-    <!-- Font Awesome CDN -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Chart.js CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- html2pdf CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <link rel="stylesheet" href="style.css">
+    <title>Controlo de Gastos</title>
+    <style>
+        /* Estilos para deixar a interface bonita e moderna */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .card {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-top: 0;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #mensagem-feedback {
+            margin-top: 15px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            min-height: 20px;
+        }
+    </style>
 </head>
-<body data-theme="light">
-    
-    <div class="app-container">
-        <!-- Sidebar Navigation -->
-        <aside class="sidebar">
-            <div class="logo">
-                <i class="fas fa-wallet"></i>
-                <h2>FinApp</h2>
+<body>
+
+    <div class="card">
+        <h2>Adicionar Gasto</h2>
+        
+        <form id="form-gastos">
+            <div class="form-group">
+                <label for="descricao">Descrição (ex: Supermercado)</label>
+                <input type="text" id="descricao" required placeholder="O que comprou?">
             </div>
-            <nav class="menu">
-                <button class="menu-btn active" data-tab="dashboard">
-                    <i class="fas fa-chart-pie"></i> Dashboard
-                </button>
-                <button class="menu-btn" data-tab="transactions">
-                    <i class="fas fa-list-ul"></i> Movimentações
-                </button>
-                <button class="menu-btn" data-tab="calendar-tab">
-                    <i class="fas fa-calendar-alt"></i> Calendário
-                </button>
-                <button class="menu-btn" data-tab="settings">
-                    <i class="fas fa-cog"></i> Configurações
-                </button>
-            </nav>
-            <div class="theme-toggle-container">
-                <button id="theme-toggle-btn">
-                    <i class="fas fa-moon"></i> <span>Modo Escuro</span>
-                </button>
+            
+            <div class="form-group">
+                <label for="valor">Valor (€)</label>
+                <input type="number" id="valor" step="0.01" required placeholder="0.00">
             </div>
-        </aside>
 
-        <!-- Main Content Area -->
-        <main class="main-content">
-            <!-- Top Navbar -->
-            <header class="top-navbar">
-                <div class="welcome-text">
-                    <h1>Olá, <span id="user-display-name">Usuário</span>!</h1>
-                    <p>Seja bem-vindo ao seu controle financeiro.</p>
-                </div>
-                <div class="top-actions">
-                    <div class="notifications-panel" id="notifications-panel">
-                        <button class="notif-btn" id="notif-btn">
-                            <i class="fas fa-bell"></i>
-                            <span class="badge" id="notif-badge">0</span>
-                        </button>
-                        <div class="notif-dropdown" id="notif-dropdown">
-                            <h4>Alertas e Avisos</h4>
-                            <ul id="notif-list">
-                                <li class="empty-notif">Nenhum alerta pendente</li>
-                            </ul>
-                        </div>
-                    </div>
-                    <button class="btn btn-primary" id="open-modal-btn">
-                        <i class="fas fa-plus"></i> Novo Lançamento
-                    </button>
-                </div>
-            </header>
+            <div class="form-group">
+                <label for="categoria">Categoria</label>
+                <select id="categoria" required>
+                    <option value="" disabled selected>Escolha uma categoria...</option>
+                    <option value="Alimentação">Alimentação</option>
+                    <option value="Transporte">Transporte</option>
+                    <option value="Lazer">Lazer</option>
+                    <option value="Saúde">Saúde</option>
+                    <option value="Outros">Outros</option>
+                </select>
+            </div>
 
-            <!-- Alerts Banner Area -->
-            <div id="alerts-banner-container"></div>
+            <button type="submit">Guardar Gasto</button>
+        </form>
 
-            <!-- TAB: Dashboard -->
-            <section id="dashboard" class="tab-content active">
-                <!-- Summary Cards -->
-                <div class="cards-grid">
-                    <div class="card card-blue">
-                        <div class="card-icon"><i class="fas fa-scale-balanced"></i></div>
-                        <div class="card-info">
-                            <h3>Saldo Atual</h3>
-                            <p class="amount" id="balance-val">R$ 0,00</p>
-                        </div>
-                    </div>
-                    <div class="card card-green">
-                        <div class="card-icon"><i class="fas fa-arrow-trend-up"></i></div>
-                        <div class="card-info">
-                            <h3>Receitas do Mês</h3>
-                            <p class="amount" id="income-val">R$ 0,00</p>
-                        </div>
-                    </div>
-                    <div class="card card-red">
-                        <div class="card-icon"><i class="fas fa-arrow-trend-down"></i></div>
-                        <div class="card-info">
-                            <h3>Despesas do Mês</h3>
-                            <p class="amount" id="expense-val">R$ 0,00</p>
-                        </div>
-                    </div>
-                    <div class="card card-purple">
-                        <div class="card-icon"><i class="fas fa-chart-line"></i></div>
-                        <div class="card-info">
-                            <h3>Previsão do Mês</h3>
-                            <p class="amount" id="forecast-val">R$ 0,00</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Meta e Progresso -->
-                <div class="dashboard-row">
-                    <div class="content-block goal-block">
-                        <h3><i class="fas fa-bullseye"></i> Meta de Economia Mensal</h3>
-                        <div class="goal-info">
-                            <span id="goal-progress-text">Gasto Atual: R$ 0,00 / Meta: R$ 0,00</span>
-                            <span id="goal-percent">0%</span>
-                        </div>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar" id="goal-progress-bar"></div>
-                        </div>
-                        <p class="subtext" id="goal-status-desc">Defina uma meta na aba de configurações.</p>
-                    </div>
-                </div>
-
-                <!-- Charts Section -->
-                <div class="charts-grid">
-                    <div class="content-block chart-container">
-                        <h3><i class="fas fa-chart-pie"></i> Gastos por Categoria</h3>
-                        <div class="chart-wrapper">
-                            <canvas id="categoryChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="content-block chart-container">
-                        <h3><i class="fas fa-chart-bar"></i> Receitas vs Despesas por Mês</h3>
-                        <div class="chart-wrapper">
-                            <canvas id="monthlyChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="content-block chart-container full-width-chart">
-                        <h3><i class="fas fa-chart-area"></i> Evolução do Saldo</h3>
-                        <div class="chart-wrapper">
-                            <canvas id="evolutionChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- TAB: Movimentações -->
-            <section id="transactions" class="tab-content">
-                <div class="content-block">
-                    <div class="block-header">
-                        <h2><i class="fas fa-exchange-alt"></i> Histórico de Lançamentos</h2>
-                        <div class="export-actions">
-                            <button class="btn btn-secondary btn-sm" id="export-csv-btn"><i class="fas fa-file-csv"></i> CSV</button>
-                            <button class="btn btn-secondary btn-sm" id="export-pdf-btn"><i class="fas fa-file-pdf"></i> PDF</button>
-                            <label for="import-csv" class="btn btn-secondary btn-sm cursor-pointer">
-                                <i class="fas fa-file-import"></i> Importar CSV
-                            </label>
-                            <input type="file" id="import-csv" accept=".csv" style="display: none;">
-                        </div>
-                    </div>
-
-                    <!-- Filters Controls -->
-                    <div class="filters-panel">
-                        <div class="filter-group search-group">
-                            <i class="fas fa-search search-icon"></i>
-                            <input type="text" id="filter-search" placeholder="Pesquisar por descrição...">
-                        </div>
-                        <div class="filter-group">
-                            <select id="filter-period">
-                                <option value="all">Todo o Período</option>
-                                <option value="current-month" selected>Mês Atual</option>
-                                <option value="last-30">Últimos 30 dias</option>
-                                <option value="future">Lançamentos Futuros</option>
-                            </select>
-                        </div>
-                        <div class="filter-group">
-                            <select id="filter-type">
-                                <option value="all">Todos os Tipos</option>
-                                <option value="receita">Receitas</option>
-                                <option value="despesa">Despesas</option>
-                            </select>
-                        </div>
-                        <div class="filter-group">
-                            <select id="filter-category">
-                                <option value="all">Todas Categorias</option>
-                            </select>
-                        </div>
-                        <div class="filter-group">
-                            <select id="filter-status">
-                                <option value="all">Todos Status</option>
-                                <option value="pago">Pago / Recebido</option>
-                                <option value="pendente">Pendente</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Table List -->
-                    <div class="table-responsive" id="pdf-table-area">
-                        <table class="transactions-table">
-                            <thead>
-                                <tr>
-                                    <th id="sort-date" class="sortable">Data <i class="fas fa-sort"></i></th>
-                                    <th>Tipo</th>
-                                    <th>Descrição</th>
-                                    <th>Categoria</th>
-                                    <th>Valor</th>
-                                    <th>Status</th>
-                                    <th class="no-print">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="transactions-list-body">
-                                <!-- Dynamic items here -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <!-- TAB: Calendário -->
-            <section id="calendar-tab" class="tab-content">
-                <div class="calendar-container content-block">
-                    <div class="calendar-header">
-                        <button class="btn btn-icon" id="prev-month-btn"><i class="fas fa-chevron-left"></i></button>
-                        <h2 id="calendar-month-year">Janeiro 2026</h2>
-                        <button class="btn btn-icon" id="next-month-btn"><i class="fas fa-chevron-right"></i></button>
-                    </div>
-                    <div class="calendar-grid-header">
-                        <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
-                    </div>
-                    <div class="calendar-grid-days" id="calendar-days">
-                        <!-- Days render dynamically -->
-                    </div>
-                </div>
-
-                <!-- Day Details Side/Bottom Panel -->
-                <div class="content-block" id="day-details-panel" style="display: none; margin-top: 20px;">
-                    <div class="block-header">
-                        <h3>Lançamentos do dia <span id="selected-date-display">--/--/----</span></h3>
-                        <button class="btn btn-sm btn-secondary" onclick="document.getElementById('day-details-panel').style.display='none'">Fechar</button>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="transactions-table">
-                            <thead>
-                                <tr>
-                                    <th>Tipo</th>
-                                    <th>Descrição</th>
-                                    <th>Categoria</th>
-                                    <th>Valor</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="day-transactions-body"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <!-- TAB: Configurações -->
-            <section id="settings" class="tab-content">
-                <div class="content-block settings-form">
-                    <h2><i class="fas fa-sliders"></i> Ajustes do Sistema</h2>
-                    <hr>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="set-username">Nome do Usuário</label>
-                            <input type="text" id="set-username" placeholder="Seu Nome">
-                        </div>
-                        <div class="form-group">
-                            <label for="set-currency">Moeda Padrão</label>
-                            <select id="set-currency">
-                                <option value="BRL">Real (R$)</option>
-                                <option value="USD">Dólar ($)</option>
-                                <option value="EUR">Euro (€)</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="set-initial-balance">Saldo Inicial</label>
-                            <input type="number" id="set-initial-balance" step="0.01" placeholder="0.00">
-                        </div>
-                        <div class="form-group">
-                            <label for="set-monthly-goal">Meta de Gastos Mensais</label>
-                            <input type="number" id="set-monthly-goal" step="0.01" placeholder="Ex: 4000.00">
-                        </div>
-                    </div>
-                    <div style="margin-top: 20px;">
-                        <button class="btn btn-primary" id="save-settings-btn"><i class="fas fa-save"></i> Salvar Configurações</button>
-                        <button class="btn btn-secondary" id="clear-data-btn" style="background-color: var(--danger); color: white;"><i class="fas fa-trash-can"></i> Resetar Todos os Dados</button>
-                    </div>
-                </div>
-            </section>
-        </main>
+        <div id="mensagem-feedback"></div>
     </div>
 
-    <!-- TRANSACTION MODAL (ADD / EDIT) -->
-    <div class="modal-overlay" id="transaction-modal">
-        <div class="modal-box">
-            <div class="modal-header">
-                <h3 id="modal-title">Novo Lançamento</h3>
-                <button class="close-modal" id="close-modal-btn"><i class="fas fa-times"></i></button>
-            </div>
-            <form id="transaction-form">
-                <input type="hidden" id="edit-index" value="">
+    <script type="module">
+        // 1. Importar o núcleo do Firebase e Analytics
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-analytics.js";
+        
+        // 2. Importar as funções da base de dados (Firestore)
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+        // 3. As suas credenciais exatas do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyBUPQZjQnJRS92_8BHR4Z0bsowh1594er4",
+            authDomain: "controledegastos-868d1.firebaseapp.com",
+            databaseURL: "https://controledegastos-868d1-default-rtdb.firebaseio.com",
+            projectId: "controledegastos-868d1",
+            storageBucket: "controledegastos-868d1.firebasestorage.app",
+            messagingSenderId: "607224476147",
+            appId: "1:607224476147:web:816fe74757adce82542286",
+            measurementId: "G-D1D035C0GS"
+        };
+
+        // 4. Inicializar os serviços do Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getFirestore(app);
+
+        // 5. Lógica para capturar o formulário e guardar os dados
+        document.getElementById("form-gastos").addEventListener("submit", async (event) => {
+            event.preventDefault(); // Evita que a página recarregue ao submeter
+
+            // Capturar os valores inseridos
+            const inputDescricao = document.getElementById("descricao").value;
+            const inputValor = parseFloat(document.getElementById("valor").value);
+            const inputCategoria = document.getElementById("categoria").value;
+            const mensagemFeedback = document.getElementById("mensagem-feedback");
+
+            try {
+                // Mensagem de "a carregar"
+                mensagemFeedback.style.color = "blue";
+                mensagemFeedback.textContent = "A guardar registo no banco de dados...";
+
+                // addDoc vai criar um documento na coleção "gastos" no seu Firestore
+                const docRef = await addDoc(collection(db, "gastos"), {
+                    descricao: inputDescricao,
+                    valor: inputValor,
+                    categoria: inputCategoria,
+                    data_registo: new Date().toISOString() // Guarda a data e hora exata
+                });
                 
-                <div class="form-group">
-                    <label>Tipo de Movimentação</label>
-                    <div class="radio-toggle">
-                        <label class="radio-label">
-                            <input type="radio" name="type" value="receita" checked id="radio-income">
-                            <span class="radio-custom income-select"><i class="fas fa-arrow-trend-up"></i> Receita</span>
-                        </label>
-                        <label class="radio-label">
-                            <input type="radio" name="type" value="despesa" id="radio-expense">
-                            <span class="radio-custom expense-select"><i class="fas fa-arrow-trend-down"></i> Despesa</span>
-                        </label>
-                    </div>
-                </div>
+                // Mensagem de sucesso
+                mensagemFeedback.style.color = "green";
+                mensagemFeedback.textContent = "Gasto guardado com sucesso!";
+                
+                // Limpar os campos do formulário para o próximo gasto
+                document.getElementById("form-gastos").reset();
 
-                <div class="form-group">
-                    <label for="tx-description">Descrição</label>
-                    <input type="text" id="tx-description" required placeholder="Ex: Salário, Supermercado...">
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="tx-value">Valor</label>
-                        <input type="number" id="tx-value" step="0.01" min="0.01" required placeholder="0.00">
-                    </div>
-                    <div class="form-group">
-                        <label for="tx-date">Data</label>
-                        <input type="date" id="tx-date" required>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="tx-category">Categoria</label>
-                        <input type="text" id="tx-category" required list="categories-suggest" placeholder="Ex: Alimentação, Lazer, Salário...">
-                        <datalist id="categories-suggest">
-                            <option value="Alimentação">
-                            <option value="Moradia">
-                            <option value="Transporte">
-                            <option value="Lazer">
-                            <option value="Saúde">
-                            <option value="Educação">
-                            <option value="Salário">
-                            <option value="Investimentos">
-                            <option value="Outros">
-                        </datalist>
-                    </div>
-                    <div class="form-group">
-                        <label for="tx-status">Status</label>
-                        <select id="tx-status">
-                            <option value="pago">Pago / Recebido</option>
-                            <option value="pendente">Pendente</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" id="cancel-modal-btn">Cancelar</button>
-                    <button type="submit" class="btn btn-primary" id="save-tx-btn">Confirmar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <script src="script.js"></script>
+                // Fazer a mensagem de sucesso desaparecer após 4 segundos
+                setTimeout(() => {
+                    mensagemFeedback.textContent = "";
+                }, 4000);
+                
+            } catch (error) {
+                // Mensagem de erro caso a base de dados não permita a escrita (ex: regras de segurança)
+                console.error("Erro ao guardar o documento: ", error);
+                mensagemFeedback.style.color = "red";
+                mensagemFeedback.textContent = "Ocorreu um erro ao guardar. Verifique a consola.";
+            }
+        });
+    </script>
 </body>
 </html>
