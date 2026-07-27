@@ -77,7 +77,6 @@ function setupAuthUI() {
             document.getElementById("auth-screen").classList.remove("active");
             document.getElementById("app-container").style.display = "table";
             
-            // Sync Username with Google Auth if default
             if (user.displayName && state.settings.username === "Usuário") {
                 state.settings.username = user.displayName;
             }
@@ -252,7 +251,20 @@ function openTransactionModal(editIdx = null) {
     } else {
         document.getElementById("modal-title").innerText = "Novo Lançamento";
         document.getElementById("edit-index").value = "";
-        document.getElementById("tx-date").value = new Date().toISOString().split('T')[0];
+        
+        // CORREÇÃO: Força a data do formulário a ser do mesmo mês que está aberto no Dashboard. 
+        // Isso impede que um lançamento crie "clones" em meses não desejados retroativamente.
+        let destYear = state.currentYear;
+        let destMonth = state.currentMonth;
+        let destDay = new Date().getDate(); // Pega o dia atual da vida real
+        
+        // Impede que o sistema tente criar dia 31 num mês que só vai até 30
+        let lastDayOfDest = new Date(destYear, destMonth + 1, 0).getDate();
+        if (destDay > lastDayOfDest) destDay = lastDayOfDest;
+        
+        const formattedDate = `${destYear}-${String(destMonth + 1).padStart(2, '0')}-${String(destDay).padStart(2, '0')}`;
+        document.getElementById("tx-date").value = formattedDate;
+
         document.getElementById("tx-fixed").checked = false;
         document.getElementById("tx-installment-current").value = "";
         document.getElementById("tx-installment-total").value = "";
@@ -280,7 +292,6 @@ function handleTransactionSubmit(e) {
         installmentTotal: parseInt(document.getElementById("tx-installment-total").value) || null
     };
 
-    // Função que calcula as datas dos meses seguintes sem quebrar calendários
     const addMonths = (dateStr, months) => {
         let [y, m, d] = dateStr.split('-').map(Number);
         let date = new Date(y, m - 1 + months, 1); 
@@ -289,20 +300,19 @@ function handleTransactionSubmit(e) {
         return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`;
     };
 
-    // Função separada que projeta as despesas no futuro 
     const gerarFuturas = (txBase) => {
         if (txBase.installmentTotal > 1) {
             const atual = txBase.installmentCurrent || 1;
             const parcelasRestantes = txBase.installmentTotal - atual;
             for (let i = 1; i <= parcelasRestantes; i++) {
                 let novaTx = { ...txBase };
-                novaTx.date = addMonths(txBase.date, i);
+                novaTx.date = addMonths(txBase.date, i); // Sempre ADICIONA meses a partir da data de inserção, nunca subtrai.
                 novaTx.installmentCurrent = atual + i;
                 novaTx.status = "pendente"; 
                 state.transactions.push(novaTx);
             }
         } else if (txBase.isFixed) {
-            for (let i = 1; i < 12; i++) { // Cria para os próximos 11 meses
+            for (let i = 1; i <= 24; i++) { // Garante 2 anos pra frente (nunca retroativo)
                 let novaTx = { ...txBase };
                 novaTx.date = addMonths(txBase.date, i);
                 novaTx.status = "pendente";
@@ -313,17 +323,16 @@ function handleTransactionSubmit(e) {
 
     if (editIdx !== "") {
         const txAntiga = state.transactions[editIdx];
-        state.transactions[editIdx] = baseTx; // Salva a edição da atual
+        state.transactions[editIdx] = baseTx; 
         
-        // Se na edição ele transformou uma despesa simples em fixa/parcelada, gera as futuras!
         if (baseTx.isFixed && !txAntiga.isFixed) {
             gerarFuturas(baseTx);
         } else if (baseTx.installmentTotal > 1 && (!txAntiga.installmentTotal || txAntiga.installmentTotal <= 1)) {
             gerarFuturas(baseTx);
         }
     } else {
-        state.transactions.push(baseTx); // Insere o lançamento novo
-        gerarFuturas(baseTx); // E gera as ramificações futuras
+        state.transactions.push(baseTx); 
+        gerarFuturas(baseTx); 
     }
 
     saveDataToFirebase();
@@ -343,7 +352,6 @@ function getCalculatedMetrics() {
     const currentMonthStr = String(state.currentMonth + 1).padStart(2, '0');
     const currentYearStr = String(state.currentYear);
     
-    // O último dia do mês que está selecionado no Dashboard
     const lastDayOfSelectedMonth = new Date(state.currentYear, state.currentMonth + 1, 0).toISOString().split('T')[0];
     const todayIso = new Date().toISOString().split('T')[0];
 
@@ -358,20 +366,18 @@ function getCalculatedMetrics() {
         const txYearStr = String(txDateObj.getFullYear());
         const isSelectedMonth = (txMonthStr === currentMonthStr && txYearStr === currentYearStr);
 
-        // 1. Cálculo do Saldo Real Hoje (Dinheiro real em caixa hoje)
+        // CORREÇÃO: O Saldo Real hoje considera só o que aconteceu até o dia atual na vida real.
         if (tx.status === "pago" || tx.date <= todayIso) {
             if (tx.type === "receita") saldoRealHoje += tx.value;
             else saldoRealHoje -= tx.value;
         }
 
-        // 2. Cálculo do Saldo Projetado até o final do MÊS SELECIONADO
-        // (Isso faz o dashboard ser preciso não importa o mês que você escolha)
-        if (tx.date <= lastDayOfSelectedMonth || tx.status === "pago") {
+        // CORREÇÃO: O Saldo Previsto do mês isola os cálculos. Se uma conta de Dezembro estiver paga, ela NÃO vai afetar o Dashboard de Agosto retroativamente.
+        if (tx.date <= lastDayOfSelectedMonth) {
             if (tx.type === "receita") saldoPrevistoFinalDoMesSelecionado += tx.value;
             else saldoPrevistoFinalDoMesSelecionado -= tx.value;
         }
 
-        // 3. Somatórios exclusivos do mês selecionado
         if (isSelectedMonth) {
             if (tx.type === "receita") receitasMes += tx.value;
             else despesasMes += tx.value;
@@ -387,7 +393,6 @@ function getCalculatedMetrics() {
 }
 
 function renderAll() {
-    // Mantém a barra de filtro no topo sincronizada com o sistema
     document.getElementById("dashboard-month").value = `${state.currentYear}-${String(state.currentMonth + 1).padStart(2, '0')}`;
     
     populateCategoryFilterDropdown();
@@ -423,7 +428,7 @@ function renderGoalProgressBar() {
         else if (percentage >= 70) progressContainer.classList.add("warning");
         
         document.getElementById("goal-status-desc").innerText = percentage >= 100 ? 
-            "⚠️ Atenção: Você ultrapassou a meta de teto limite estipulada para gastos do mês!" : "Seu planejamento de despesas está dentro do limite controlado.";
+            "⚠️ Atenção: Você ultrapassou a meta estipulada para gastos do mês!" : "Seu planejamento de despesas está dentro do limite controlado.";
     } else {
         document.getElementById("goal-progress-text").innerText = "Meta não configurada.";
         document.getElementById("goal-percent").innerText = "0%";
