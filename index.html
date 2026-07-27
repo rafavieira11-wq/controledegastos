@@ -92,6 +92,12 @@
             <div id="alerts-banner-container"></div>
 
             <section id="dashboard" class="tab-content active">
+                <!-- Filtro Global do Dashboard -->
+                <div class="dashboard-header-filter" style="background: var(--card-bg); padding: 15px 20px; border-radius: var(--radius); margin-bottom: 20px; display: flex; align-items: center; gap: 15px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+                    <label for="dashboard-month" style="font-weight: 600; color: var(--text-color);"><i class="fas fa-calendar-alt"></i> Mês de Referência:</label>
+                    <input type="month" id="dashboard-month" style="padding: 8px 12px; border: 1px solid var(--border-color); background-color: var(--bg-color); color: var(--text-color); border-radius: 6px; outline: none; font-size: 14px; font-weight: bold; cursor: pointer;">
+                </div>
+
                 <div class="cards-grid">
                     <div class="card card-blue">
                         <div class="card-icon"><i class="fas fa-scale-balanced"></i></div>
@@ -174,10 +180,6 @@
                     </div>
 
                     <div class="filters-panel">
-                        <!-- Novo Filtro de Mês Específico -->
-                        <div class="filter-group">
-                            <input type="month" id="filter-specific-month" title="Consultar Mês Específico" style="border-color: var(--primary); font-weight: bold;">
-                        </div>
                         <div class="filter-group search-group">
                             <i class="fas fa-search search-icon"></i>
                             <input type="text" id="filter-search" placeholder="Pesquisar por descrição...">
@@ -185,7 +187,7 @@
                         <div class="filter-group">
                             <select id="filter-period">
                                 <option value="all">Todo o Período</option>
-                                <option value="current-month" selected>Mês Atual</option>
+                                <option value="current-month" selected>Mês Atual (Ref)</option>
                                 <option value="last-30">Últimos 30 dias</option>
                                 <option value="future">Lançamentos Futuros</option>
                             </select>
@@ -370,7 +372,7 @@
                 <div class="form-row" style="margin-top: 10px;">
                     <div class="form-group" style="flex-direction: row; align-items: center; justify-content: flex-start; gap: 8px;">
                         <input type="checkbox" id="tx-fixed" style="width: auto; margin: 0; padding: 0; transform: scale(1.2); cursor: pointer;">
-                        <label for="tx-fixed" style="margin: 0; cursor: pointer; color: var(--primary); font-weight: bold;">Lançamento Fixo (Mensal)</label>
+                        <label for="tx-fixed" style="margin: 0; cursor: pointer; color: var(--primary); font-weight: bold;">Lançamento Fixo Mensal</label>
                     </div>
                 </div>
                 
