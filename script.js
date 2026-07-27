@@ -170,7 +170,6 @@ function setupEventListeners() {
     document.getElementById("cancel-modal-btn").addEventListener("click", closeTransactionModal);
     document.getElementById("transaction-form").addEventListener("submit", handleTransactionSubmit);
 
-    // Evento do Filtro de Mês no Dashboard
     document.getElementById("dashboard-month").addEventListener("change", (e) => {
         const val = e.target.value;
         if(val) {
@@ -252,13 +251,11 @@ function openTransactionModal(editIdx = null) {
         document.getElementById("modal-title").innerText = "Novo Lançamento";
         document.getElementById("edit-index").value = "";
         
-        // CORREÇÃO: Força a data do formulário a ser do mesmo mês que está aberto no Dashboard. 
-        // Isso impede que um lançamento crie "clones" em meses não desejados retroativamente.
+        // Puxa o mês do Dashboard
         let destYear = state.currentYear;
         let destMonth = state.currentMonth;
-        let destDay = new Date().getDate(); // Pega o dia atual da vida real
+        let destDay = new Date().getDate(); 
         
-        // Impede que o sistema tente criar dia 31 num mês que só vai até 30
         let lastDayOfDest = new Date(destYear, destMonth + 1, 0).getDate();
         if (destDay > lastDayOfDest) destDay = lastDayOfDest;
         
@@ -306,13 +303,13 @@ function handleTransactionSubmit(e) {
             const parcelasRestantes = txBase.installmentTotal - atual;
             for (let i = 1; i <= parcelasRestantes; i++) {
                 let novaTx = { ...txBase };
-                novaTx.date = addMonths(txBase.date, i); // Sempre ADICIONA meses a partir da data de inserção, nunca subtrai.
+                novaTx.date = addMonths(txBase.date, i); 
                 novaTx.installmentCurrent = atual + i;
                 novaTx.status = "pendente"; 
                 state.transactions.push(novaTx);
             }
         } else if (txBase.isFixed) {
-            for (let i = 1; i <= 24; i++) { // Garante 2 anos pra frente (nunca retroativo)
+            for (let i = 1; i <= 24; i++) { 
                 let novaTx = { ...txBase };
                 novaTx.date = addMonths(txBase.date, i);
                 novaTx.status = "pendente";
@@ -366,13 +363,11 @@ function getCalculatedMetrics() {
         const txYearStr = String(txDateObj.getFullYear());
         const isSelectedMonth = (txMonthStr === currentMonthStr && txYearStr === currentYearStr);
 
-        // CORREÇÃO: O Saldo Real hoje considera só o que aconteceu até o dia atual na vida real.
         if (tx.status === "pago" || tx.date <= todayIso) {
             if (tx.type === "receita") saldoRealHoje += tx.value;
             else saldoRealHoje -= tx.value;
         }
 
-        // CORREÇÃO: O Saldo Previsto do mês isola os cálculos. Se uma conta de Dezembro estiver paga, ela NÃO vai afetar o Dashboard de Agosto retroativamente.
         if (tx.date <= lastDayOfSelectedMonth) {
             if (tx.type === "receita") saldoPrevistoFinalDoMesSelecionado += tx.value;
             else saldoPrevistoFinalDoMesSelecionado -= tx.value;
@@ -593,6 +588,7 @@ function renderCharts() {
     const currentMonthStr = String(state.currentMonth + 1).padStart(2, '0');
     const currentYearStr = String(state.currentYear);
 
+    // 1. Gráfico de Categoria (Focado apenas no mês selecionado)
     let categoriesMap = {};
     state.transactions.forEach(tx => {
         const d = new Date(tx.date + 'T00:00:00');
@@ -606,33 +602,68 @@ function renderCharts() {
     const pieLabels = Object.keys(categoriesMap);
     const pieData = Object.values(categoriesMap);
 
-    let monthlyAggregation = {};
-    state.transactions.forEach(tx => {
-        const d = new Date(tx.date + 'T00:00:00');
-        const labelKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        if (!monthlyAggregation[labelKey]) monthlyAggregation[labelKey] = { income: 0, expense: 0 };
-        if (tx.type === "receita") monthlyAggregation[labelKey].income += tx.value;
-        else monthlyAggregation[labelKey].expense += tx.value;
-    });
-    const sortedMonthsKeys = Object.keys(monthlyAggregation).sort().slice(-6); 
-    const barLabels = sortedMonthsKeys.map(k => {
+    // 2. Foco nos 3 meses: Anterior, Atual e Próximo
+    const mesAnterior = new Date(state.currentYear, state.currentMonth - 1, 1);
+    const mesAtual = new Date(state.currentYear, state.currentMonth, 1);
+    const mesProximo = new Date(state.currentYear, state.currentMonth + 1, 1);
+
+    const keysTrimestre = [
+        `${mesAnterior.getFullYear()}-${String(mesAnterior.getMonth() + 1).padStart(2, '0')}`,
+        `${mesAtual.getFullYear()}-${String(mesAtual.getMonth() + 1).padStart(2, '0')}`,
+        `${mesProximo.getFullYear()}-${String(mesProximo.getMonth() + 1).padStart(2, '0')}`
+    ];
+
+    const labelsTrimestre = keysTrimestre.map(k => {
         const pts = k.split('-');
         const mNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
         return `${mNames[parseInt(pts[1]) - 1]}/${pts[0].slice(2)}`;
     });
-    const barIncomeData = sortedMonthsKeys.map(k => monthlyAggregation[k].income);
-    const barExpenseData = sortedMonthsKeys.map(k => monthlyAggregation[k].expense);
+
+    // 3. Gráfico de Barras filtrado nesse trimestre
+    let monthlyAggregation = {
+        [keysTrimestre[0]]: { income: 0, expense: 0 },
+        [keysTrimestre[1]]: { income: 0, expense: 0 },
+        [keysTrimestre[2]]: { income: 0, expense: 0 }
+    };
+
+    state.transactions.forEach(tx => {
+        const d = new Date(tx.date + 'T00:00:00');
+        const labelKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        if (monthlyAggregation[labelKey]) {
+            if (tx.type === "receita") monthlyAggregation[labelKey].income += tx.value;
+            else monthlyAggregation[labelKey].expense += tx.value;
+        }
+    });
+
+    const barIncomeData = keysTrimestre.map(k => monthlyAggregation[k].income);
+    const barExpenseData = keysTrimestre.map(k => monthlyAggregation[k].expense);
+
+    // 4. Gráfico de Evolução calculado do mês anterior até o próximo
+    let saldoInicialTrimestre = parseFloat(state.settings.initialBalance);
+    let lineLabels = ["Início"];
+    let lineData = [];
 
     let chronologicalTx = [...state.transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    let runningBalance = parseFloat(state.settings.initialBalance);
-    let lineLabels = ["Início"];
-    let lineData = [runningBalance];
-    
-    chronologicalTx.slice(-12).forEach(tx => {
-        if (tx.type === "receita") runningBalance += tx.value;
-        else runningBalance -= tx.value;
-        lineLabels.push(formatDateString(tx.date));
-        lineData.push(runningBalance);
+    const primeiroDiaMesAnterior = `${keysTrimestre[0]}-01`;
+    const ultimoDiaMesProximo = new Date(mesProximo.getFullYear(), mesProximo.getMonth() + 1, 0).toISOString().split('T')[0];
+
+    chronologicalTx.forEach(tx => {
+        if (tx.date < primeiroDiaMesAnterior) {
+            if (tx.type === "receita") saldoInicialTrimestre += tx.value;
+            else saldoInicialTrimestre -= tx.value;
+        }
+    });
+
+    lineData.push(saldoInicialTrimestre);
+    let saldoEvolutivo = saldoInicialTrimestre;
+
+    chronologicalTx.forEach(tx => {
+        if (tx.date >= primeiroDiaMesAnterior && tx.date <= ultimoDiaMesProximo) {
+            if (tx.type === "receita") saldoEvolutivo += tx.value;
+            else saldoEvolutivo -= tx.value;
+            lineLabels.push(formatDateString(tx.date));
+            lineData.push(saldoEvolutivo);
+        }
     });
 
     if (charts.category) charts.category.destroy();
@@ -651,7 +682,7 @@ function renderCharts() {
 
     const ctxBar = document.getElementById('monthlyChart').getContext('2d');
     charts.monthly = new Chart(ctxBar, {
-        type: 'bar', data: { labels: barLabels.length > 0 ? barLabels : ["Sem Dados"], datasets: [{ label: 'Receitas', data: barIncomeData, backgroundColor: '#10b981' }, { label: 'Despesas', data: barExpenseData, backgroundColor: '#ef4444' }] },
+        type: 'bar', data: { labels: labelsTrimestre, datasets: [{ label: 'Receitas', data: barIncomeData, backgroundColor: '#10b981' }, { label: 'Despesas', data: barExpenseData, backgroundColor: '#ef4444' }] },
         options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: gridColor }, ticks: { color: labelColor } }, y: { grid: { color: gridColor }, ticks: { color: labelColor } } }, plugins: { legend: { labels: { color: labelColor } } } }
     });
 
