@@ -171,7 +171,7 @@ function setupEventListeners() {
     document.getElementById("cancel-modal-btn").addEventListener("click", closeTransactionModal);
     document.getElementById("transaction-form").addEventListener("submit", handleTransactionSubmit);
 
-    // Evento do NOVO Filtro de Mês no Dashboard
+    // Evento do Filtro de Mês no Dashboard
     document.getElementById("dashboard-month").addEventListener("change", (e) => {
         const val = e.target.value;
         if(val) {
@@ -268,7 +268,6 @@ function handleTransactionSubmit(e) {
     e.preventDefault();
     const editIdx = document.getElementById("edit-index").value;
     
-    // Pega os dados base preenchidos no formulário
     const baseTx = {
         type: document.querySelector('input[name="type"]:checked').value,
         description: document.getElementById("tx-description").value.trim(),
@@ -281,45 +280,50 @@ function handleTransactionSubmit(e) {
         installmentTotal: parseInt(document.getElementById("tx-installment-total").value) || null
     };
 
-    if (editIdx !== "") {
-        // Se for edição de algo existente, edita só ele
-        state.transactions[editIdx] = baseTx;
-    } else {
-        // Função inteligente para avançar meses sem quebrar datas (ex: 31 Jan -> 28 Fev)
-        const addMonths = (dateStr, months) => {
-            let [y, m, d] = dateStr.split('-').map(Number);
-            let date = new Date(y, m - 1 + months, 1); 
-            let lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-            let targetDay = d > lastDay ? lastDay : d;
-            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`;
-        };
+    // Função que calcula as datas dos meses seguintes sem quebrar calendários
+    const addMonths = (dateStr, months) => {
+        let [y, m, d] = dateStr.split('-').map(Number);
+        let date = new Date(y, m - 1 + months, 1); 
+        let lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+        let targetDay = d > lastDay ? lastDay : d;
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`;
+    };
 
-        // Lógica de Geração Automática para Próximos Meses
-        if (baseTx.installmentTotal > 1) {
-            // Se for parcela, gera a quantidade exata de parcelas futuras
-            const atual = baseTx.installmentCurrent || 1;
-            const parcelasRestantes = baseTx.installmentTotal - atual;
-            
-            for (let i = 0; i <= parcelasRestantes; i++) {
-                let novaTx = { ...baseTx };
-                novaTx.date = addMonths(baseTx.date, i);
+    // Função separada que projeta as despesas no futuro 
+    const gerarFuturas = (txBase) => {
+        if (txBase.installmentTotal > 1) {
+            const atual = txBase.installmentCurrent || 1;
+            const parcelasRestantes = txBase.installmentTotal - atual;
+            for (let i = 1; i <= parcelasRestantes; i++) {
+                let novaTx = { ...txBase };
+                novaTx.date = addMonths(txBase.date, i);
                 novaTx.installmentCurrent = atual + i;
-                // Deixa as futuras como pendentes
-                if(i > 0) novaTx.status = "pendente"; 
+                novaTx.status = "pendente"; 
                 state.transactions.push(novaTx);
             }
-        } else if (baseTx.isFixed) {
-            // Se for fixo, projeta para os próximos 12 meses automaticamente
-            for (let i = 0; i < 12; i++) {
-                let novaTx = { ...baseTx };
-                novaTx.date = addMonths(baseTx.date, i);
-                if(i > 0) novaTx.status = "pendente";
+        } else if (txBase.isFixed) {
+            for (let i = 1; i < 12; i++) { // Cria para os próximos 11 meses
+                let novaTx = { ...txBase };
+                novaTx.date = addMonths(txBase.date, i);
+                novaTx.status = "pendente";
                 state.transactions.push(novaTx);
             }
-        } else {
-            // Lançamento normal (único)
-            state.transactions.push(baseTx);
         }
+    };
+
+    if (editIdx !== "") {
+        const txAntiga = state.transactions[editIdx];
+        state.transactions[editIdx] = baseTx; // Salva a edição da atual
+        
+        // Se na edição ele transformou uma despesa simples em fixa/parcelada, gera as futuras!
+        if (baseTx.isFixed && !txAntiga.isFixed) {
+            gerarFuturas(baseTx);
+        } else if (baseTx.installmentTotal > 1 && (!txAntiga.installmentTotal || txAntiga.installmentTotal <= 1)) {
+            gerarFuturas(baseTx);
+        }
+    } else {
+        state.transactions.push(baseTx); // Insere o lançamento novo
+        gerarFuturas(baseTx); // E gera as ramificações futuras
     }
 
     saveDataToFirebase();
@@ -339,46 +343,51 @@ function getCalculatedMetrics() {
     const currentMonthStr = String(state.currentMonth + 1).padStart(2, '0');
     const currentYearStr = String(state.currentYear);
     
-    let saldoAtual = parseFloat(state.settings.initialBalance);
+    // O último dia do mês que está selecionado no Dashboard
+    const lastDayOfSelectedMonth = new Date(state.currentYear, state.currentMonth + 1, 0).toISOString().split('T')[0];
+    const todayIso = new Date().toISOString().split('T')[0];
+
+    let saldoRealHoje = parseFloat(state.settings.initialBalance);
+    let saldoPrevistoFinalDoMesSelecionado = parseFloat(state.settings.initialBalance);
     let receitasMes = 0;
     let despesasMes = 0;
-    let totalAReceberFuturo = 0;
-    let totalAPagarFuturo = 0;
-
-    const todayIso = new Date().toISOString().split('T')[0];
 
     state.transactions.forEach(tx => {
         const txDateObj = new Date(tx.date + 'T00:00:00');
         const txMonthStr = String(txDateObj.getMonth() + 1).padStart(2, '0');
         const txYearStr = String(txDateObj.getFullYear());
-        
-        const isCurrentMonth = (txMonthStr === currentMonthStr && txYearStr === currentYearStr);
-        
+        const isSelectedMonth = (txMonthStr === currentMonthStr && txYearStr === currentYearStr);
+
+        // 1. Cálculo do Saldo Real Hoje (Dinheiro real em caixa hoje)
         if (tx.status === "pago" || tx.date <= todayIso) {
-            if (tx.type === "receita") saldoAtual += tx.value;
-            else saldoAtual -= tx.value;
+            if (tx.type === "receita") saldoRealHoje += tx.value;
+            else saldoRealHoje -= tx.value;
         }
 
-        if (isCurrentMonth) {
+        // 2. Cálculo do Saldo Projetado até o final do MÊS SELECIONADO
+        // (Isso faz o dashboard ser preciso não importa o mês que você escolha)
+        if (tx.date <= lastDayOfSelectedMonth || tx.status === "pago") {
+            if (tx.type === "receita") saldoPrevistoFinalDoMesSelecionado += tx.value;
+            else saldoPrevistoFinalDoMesSelecionado -= tx.value;
+        }
+
+        // 3. Somatórios exclusivos do mês selecionado
+        if (isSelectedMonth) {
             if (tx.type === "receita") receitasMes += tx.value;
             else despesasMes += tx.value;
-        }
-
-        if (tx.date > todayIso && tx.status === "pendente") {
-            if (tx.type === "receita") totalAReceberFuturo += tx.value;
-            else totalAPagarFuturo += tx.value;
         }
     });
 
     return {
-        saldoAtual, receitasMes, despesasMes,
-        saldoPrevistoFinalMes: saldoAtual + totalAReceberFuturo - totalAPagarFuturo,
-        totalAReceberFuturo, totalAPagarFuturo
+        saldoAtual: saldoRealHoje,
+        receitasMes, 
+        despesasMes,
+        saldoPrevistoFinalMes: saldoPrevistoFinalDoMesSelecionado
     };
 }
 
 function renderAll() {
-    // Sincroniza o valor do filtro visual do dashboard com a variável do sistema
+    // Mantém a barra de filtro no topo sincronizada com o sistema
     document.getElementById("dashboard-month").value = `${state.currentYear}-${String(state.currentMonth + 1).padStart(2, '0')}`;
     
     populateCategoryFilterDropdown();
@@ -516,7 +525,6 @@ function renderTransactionsTable() {
 
         if (periodVal === "current-month") {
             const dateObj = new Date(item.date + 'T00:00:00');
-            // Agora usa o mês selecionado no Dashboard para filtrar!
             if (String(dateObj.getMonth() + 1).padStart(2, '0') !== currentMonthStr || String(dateObj.getFullYear()) !== currentYearStr) return false;
         } else if (periodVal === "last-30") {
             if (item.date < thirtyDaysAgoStr || item.date > todayStr) return false;
@@ -586,7 +594,6 @@ function renderCharts() {
         const txM = String(d.getMonth() + 1).padStart(2, '0');
         const txY = String(d.getFullYear());
         
-        // O gráfico de categorias agora só mostra os gastos do mês selecionado no Dashboard
         if (tx.type === "despesa" && txM === currentMonthStr && txY === currentYearStr) {
             categoriesMap[tx.category] = (categoriesMap[tx.category] || 0) + tx.value;
         }
@@ -706,7 +713,6 @@ function shiftCalendarMonth(direction) {
     if (state.currentMonth > 11) { state.currentMonth = 0; state.currentYear++; } 
     else if (state.currentMonth < 0) { state.currentMonth = 11; state.currentYear--; }
     
-    // Atualiza todo o sistema quando o calendário mudar
     renderAll();
 }
 
