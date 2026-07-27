@@ -104,7 +104,6 @@ async function loadDataFromFirebase() {
             state.settings = data.settings || state.settings;
             state.theme = data.theme || state.theme;
         } else {
-            // Se for usuário novo, cria o nó no DB
             saveDataToFirebase();
         }
     } catch (e) {
@@ -143,13 +142,12 @@ function updateUIElementsFromSettings() {
 function setupEventListeners() {
     eventsSetup = true;
 
-    // Logout
     document.getElementById("logout-btn").addEventListener("click", () => {
         signOut(auth);
     });
 
     document.querySelectorAll(".menu-btn").forEach(btn => {
-        if (btn.id === "logout-btn") return; // Ignore logout for tabs
+        if (btn.id === "logout-btn") return; 
         btn.addEventListener("click", (e) => {
             document.querySelectorAll(".menu-btn").forEach(b => b.classList.remove("active"));
             btn.classList.add("active");
@@ -173,6 +171,7 @@ function setupEventListeners() {
     document.getElementById("cancel-modal-btn").addEventListener("click", closeTransactionModal);
     document.getElementById("transaction-form").addEventListener("submit", handleTransactionSubmit);
 
+    document.getElementById("filter-specific-month").addEventListener("change", renderTransactionsTable);
     document.getElementById("filter-search").addEventListener("input", renderTransactionsTable);
     document.getElementById("filter-period").addEventListener("change", renderTransactionsTable);
     document.getElementById("filter-type").addEventListener("change", renderTransactionsTable);
@@ -236,10 +235,18 @@ function openTransactionModal(editIdx = null) {
         document.getElementById("tx-date").value = tx.date;
         document.getElementById("tx-category").value = tx.category;
         document.getElementById("tx-status").value = tx.status;
+        
+        // Carrega infos novas
+        document.getElementById("tx-fixed").checked = tx.isFixed || false;
+        document.getElementById("tx-installment-current").value = tx.installmentCurrent || "";
+        document.getElementById("tx-installment-total").value = tx.installmentTotal || "";
     } else {
         document.getElementById("modal-title").innerText = "Novo Lançamento";
         document.getElementById("edit-index").value = "";
         document.getElementById("tx-date").value = new Date().toISOString().split('T')[0];
+        document.getElementById("tx-fixed").checked = false;
+        document.getElementById("tx-installment-current").value = "";
+        document.getElementById("tx-installment-total").value = "";
     }
     modal.classList.add("active");
 }
@@ -257,7 +264,10 @@ function handleTransactionSubmit(e) {
         value: parseFloat(document.getElementById("tx-value").value),
         date: document.getElementById("tx-date").value,
         category: document.getElementById("tx-category").value.trim(),
-        status: document.getElementById("tx-status").value
+        status: document.getElementById("tx-status").value,
+        isFixed: document.getElementById("tx-fixed").checked,
+        installmentCurrent: parseInt(document.getElementById("tx-installment-current").value) || null,
+        installmentTotal: parseInt(document.getElementById("tx-installment-total").value) || null
     };
 
     if (editIdx !== "") state.transactions[editIdx] = txData;
@@ -433,6 +443,7 @@ function renderTransactionsTable() {
     const listBody = document.getElementById("transactions-list-body");
     listBody.innerHTML = "";
 
+    const specificMonthVal = document.getElementById("filter-specific-month").value;
     const searchVal = document.getElementById("filter-search").value.toLowerCase();
     const periodVal = document.getElementById("filter-period").value;
     const typeVal = document.getElementById("filter-type").value;
@@ -453,7 +464,11 @@ function renderTransactionsTable() {
         if (catVal !== "all" && item.category !== catVal) return false;
         if (statusVal !== "all" && item.status !== statusVal) return false;
 
-        if (periodVal === "current-month") {
+        // Se o usuário selecionou um mês específico no novo input de data
+        if (specificMonthVal) {
+            if (!item.date.startsWith(specificMonthVal)) return false;
+        } 
+        else if (periodVal === "current-month") {
             const dateObj = new Date(item.date + 'T00:00:00');
             if (String(dateObj.getMonth() + 1).padStart(2, '0') !== currentMonthStr || String(dateObj.getFullYear()) !== currentYearStr) return false;
         } else if (periodVal === "last-30") {
@@ -477,10 +492,21 @@ function renderTransactionsTable() {
 
     filteredList.forEach(item => {
         const tr = document.createElement("tr");
+        
+        let badgesInfos = '';
+        if (item.isFixed) {
+            badgesInfos += `<span class="badge-extra badge-fixed">Fixa</span>`;
+        }
+        if (item.installmentTotal && item.installmentTotal > 1) {
+            const atual = item.installmentCurrent || 1;
+            const faltam = item.installmentTotal - atual;
+            badgesInfos += `<span class="badge-extra badge-installment">Parcela ${atual}/${item.installmentTotal} (Faltam ${faltam})</span>`;
+        }
+
         tr.innerHTML = `
             <td>${formatDateString(item.date)}</td>
             <td><i class="${item.type === 'receita' ? 'fas fa-circle-arrow-up text-income' : 'fas fa-circle-arrow-down text-expense'}"></i> ${item.type === 'receita' ? 'Receita' : 'Despesa'}</td>
-            <td><b>${item.description}</b></td>
+            <td><b>${item.description}</b> ${badgesInfos}</td>
             <td><span style="opacity:0.85">${item.category}</span></td>
             <td class="${item.type === 'receita' ? 'text-income' : 'text-expense'}">${item.type === 'receita' ? '+' : '-'} ${formatCurrency(item.value)}</td>
             <td><span class="badge-status ${item.status}">${item.status === 'pago' ? 'Pago' : 'Pendente'}</span></td>
@@ -636,9 +662,17 @@ function showCalendarDayDetails(dateStr, dayTransactions) {
     } else {
         dayTransactions.forEach(tx => {
             const tr = document.createElement("tr");
+            
+            let badgesInfos = '';
+            if (tx.isFixed) badgesInfos += `<span class="badge-extra badge-fixed">Fixa</span>`;
+            if (tx.installmentTotal && tx.installmentTotal > 1) {
+                const atual = tx.installmentCurrent || 1;
+                badgesInfos += `<span class="badge-extra badge-installment">${atual}/${tx.installmentTotal}</span>`;
+            }
+
             tr.innerHTML = `
                 <td><i class="${tx.type === 'receita' ? 'fas fa-circle-arrow-up text-income' : 'fas fa-circle-arrow-down text-expense'}"></i> ${tx.type === 'receita' ? 'Receita' : 'Despesa'}</td>
-                <td><b>${tx.description}</b></td>
+                <td><b>${tx.description}</b> ${badgesInfos}</td>
                 <td>${tx.category}</td>
                 <td class="${tx.type === 'receita' ? 'text-income' : 'text-expense'}">${tx.type === 'receita' ? '+' : '-'} ${formatCurrency(tx.value)}</td>
                 <td><span class="badge-status ${tx.status}">${tx.status === 'pago' ? 'Pago' : 'Pendente'}</span></td>
