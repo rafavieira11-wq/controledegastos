@@ -171,7 +171,17 @@ function setupEventListeners() {
     document.getElementById("cancel-modal-btn").addEventListener("click", closeTransactionModal);
     document.getElementById("transaction-form").addEventListener("submit", handleTransactionSubmit);
 
-    document.getElementById("filter-specific-month").addEventListener("change", renderTransactionsTable);
+    // Evento do NOVO Filtro de Mês no Dashboard
+    document.getElementById("dashboard-month").addEventListener("change", (e) => {
+        const val = e.target.value;
+        if(val) {
+            const [y, m] = val.split('-');
+            state.currentYear = parseInt(y);
+            state.currentMonth = parseInt(m) - 1;
+            renderAll();
+        }
+    });
+
     document.getElementById("filter-search").addEventListener("input", renderTransactionsTable);
     document.getElementById("filter-period").addEventListener("change", renderTransactionsTable);
     document.getElementById("filter-type").addEventListener("change", renderTransactionsTable);
@@ -236,7 +246,6 @@ function openTransactionModal(editIdx = null) {
         document.getElementById("tx-category").value = tx.category;
         document.getElementById("tx-status").value = tx.status;
         
-        // Carrega infos novas
         document.getElementById("tx-fixed").checked = tx.isFixed || false;
         document.getElementById("tx-installment-current").value = tx.installmentCurrent || "";
         document.getElementById("tx-installment-total").value = tx.installmentTotal || "";
@@ -258,7 +267,9 @@ function closeTransactionModal() {
 function handleTransactionSubmit(e) {
     e.preventDefault();
     const editIdx = document.getElementById("edit-index").value;
-    const txData = {
+    
+    // Pega os dados base preenchidos no formulário
+    const baseTx = {
         type: document.querySelector('input[name="type"]:checked').value,
         description: document.getElementById("tx-description").value.trim(),
         value: parseFloat(document.getElementById("tx-value").value),
@@ -270,8 +281,46 @@ function handleTransactionSubmit(e) {
         installmentTotal: parseInt(document.getElementById("tx-installment-total").value) || null
     };
 
-    if (editIdx !== "") state.transactions[editIdx] = txData;
-    else state.transactions.push(txData);
+    if (editIdx !== "") {
+        // Se for edição de algo existente, edita só ele
+        state.transactions[editIdx] = baseTx;
+    } else {
+        // Função inteligente para avançar meses sem quebrar datas (ex: 31 Jan -> 28 Fev)
+        const addMonths = (dateStr, months) => {
+            let [y, m, d] = dateStr.split('-').map(Number);
+            let date = new Date(y, m - 1 + months, 1); 
+            let lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+            let targetDay = d > lastDay ? lastDay : d;
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`;
+        };
+
+        // Lógica de Geração Automática para Próximos Meses
+        if (baseTx.installmentTotal > 1) {
+            // Se for parcela, gera a quantidade exata de parcelas futuras
+            const atual = baseTx.installmentCurrent || 1;
+            const parcelasRestantes = baseTx.installmentTotal - atual;
+            
+            for (let i = 0; i <= parcelasRestantes; i++) {
+                let novaTx = { ...baseTx };
+                novaTx.date = addMonths(baseTx.date, i);
+                novaTx.installmentCurrent = atual + i;
+                // Deixa as futuras como pendentes
+                if(i > 0) novaTx.status = "pendente"; 
+                state.transactions.push(novaTx);
+            }
+        } else if (baseTx.isFixed) {
+            // Se for fixo, projeta para os próximos 12 meses automaticamente
+            for (let i = 0; i < 12; i++) {
+                let novaTx = { ...baseTx };
+                novaTx.date = addMonths(baseTx.date, i);
+                if(i > 0) novaTx.status = "pendente";
+                state.transactions.push(novaTx);
+            }
+        } else {
+            // Lançamento normal (único)
+            state.transactions.push(baseTx);
+        }
+    }
 
     saveDataToFirebase();
     closeTransactionModal();
@@ -287,7 +336,6 @@ function deleteTransactionItem(idx) {
 }
 
 function getCalculatedMetrics() {
-    const now = new Date();
     const currentMonthStr = String(state.currentMonth + 1).padStart(2, '0');
     const currentYearStr = String(state.currentYear);
     
@@ -297,7 +345,7 @@ function getCalculatedMetrics() {
     let totalAReceberFuturo = 0;
     let totalAPagarFuturo = 0;
 
-    const todayIso = now.toISOString().split('T')[0];
+    const todayIso = new Date().toISOString().split('T')[0];
 
     state.transactions.forEach(tx => {
         const txDateObj = new Date(tx.date + 'T00:00:00');
@@ -330,6 +378,9 @@ function getCalculatedMetrics() {
 }
 
 function renderAll() {
+    // Sincroniza o valor do filtro visual do dashboard com a variável do sistema
+    document.getElementById("dashboard-month").value = `${state.currentYear}-${String(state.currentMonth + 1).padStart(2, '0')}`;
+    
     populateCategoryFilterDropdown();
     renderDashboardMetricsCards();
     renderGoalProgressBar();
@@ -443,7 +494,6 @@ function renderTransactionsTable() {
     const listBody = document.getElementById("transactions-list-body");
     listBody.innerHTML = "";
 
-    const specificMonthVal = document.getElementById("filter-specific-month").value;
     const searchVal = document.getElementById("filter-search").value.toLowerCase();
     const periodVal = document.getElementById("filter-period").value;
     const typeVal = document.getElementById("filter-type").value;
@@ -464,12 +514,9 @@ function renderTransactionsTable() {
         if (catVal !== "all" && item.category !== catVal) return false;
         if (statusVal !== "all" && item.status !== statusVal) return false;
 
-        // Se o usuário selecionou um mês específico no novo input de data
-        if (specificMonthVal) {
-            if (!item.date.startsWith(specificMonthVal)) return false;
-        } 
-        else if (periodVal === "current-month") {
+        if (periodVal === "current-month") {
             const dateObj = new Date(item.date + 'T00:00:00');
+            // Agora usa o mês selecionado no Dashboard para filtrar!
             if (String(dateObj.getMonth() + 1).padStart(2, '0') !== currentMonthStr || String(dateObj.getFullYear()) !== currentYearStr) return false;
         } else if (periodVal === "last-30") {
             if (item.date < thirtyDaysAgoStr || item.date > todayStr) return false;
@@ -486,7 +533,7 @@ function renderTransactionsTable() {
     });
 
     if (filteredList.length === 0) {
-        listBody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:30px;">Nenhum lançamento localizado com os filtros selecionados.</td></tr>`;
+        listBody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:30px;">Nenhum lançamento localizado. Tente alterar o Mês de Referência no Dashboard.</td></tr>`;
         return;
     }
 
@@ -530,9 +577,19 @@ function renderCharts() {
     const gridColor = isDark ? '#334155' : '#e2e8f0';
     const labelColor = isDark ? '#94a3b8' : '#2c3e50';
 
+    const currentMonthStr = String(state.currentMonth + 1).padStart(2, '0');
+    const currentYearStr = String(state.currentYear);
+
     let categoriesMap = {};
     state.transactions.forEach(tx => {
-        if (tx.type === "despesa") categoriesMap[tx.category] = (categoriesMap[tx.category] || 0) + tx.value;
+        const d = new Date(tx.date + 'T00:00:00');
+        const txM = String(d.getMonth() + 1).padStart(2, '0');
+        const txY = String(d.getFullYear());
+        
+        // O gráfico de categorias agora só mostra os gastos do mês selecionado no Dashboard
+        if (tx.type === "despesa" && txM === currentMonthStr && txY === currentYearStr) {
+            categoriesMap[tx.category] = (categoriesMap[tx.category] || 0) + tx.value;
+        }
     });
     const pieLabels = Object.keys(categoriesMap);
     const pieData = Object.values(categoriesMap);
@@ -648,7 +705,9 @@ function shiftCalendarMonth(direction) {
     state.currentMonth += direction;
     if (state.currentMonth > 11) { state.currentMonth = 0; state.currentYear++; } 
     else if (state.currentMonth < 0) { state.currentMonth = 11; state.currentYear--; }
-    renderCalendar();
+    
+    // Atualiza todo o sistema quando o calendário mudar
+    renderAll();
 }
 
 function showCalendarDayDetails(dateStr, dayTransactions) {
