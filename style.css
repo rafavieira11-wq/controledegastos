@@ -981,3 +981,23 @@ body {
         box-shadow: none !important;
     }
 }
+/* Novas tags para Fixa e Parcelas */
+.badge-extra {
+    font-size: 11px;
+    padding: 3px 6px;
+    border-radius: 4px;
+    margin-left: 8px;
+    display: inline-block;
+    vertical-align: middle;
+    font-weight: bold;
+}
+.badge-fixed { 
+    background-color: var(--purple-light); 
+    color: var(--purple-forecast); 
+    border: 1px solid var(--purple-forecast); 
+}
+.badge-installment { 
+    background-color: var(--info-light); 
+    color: var(--info); 
+    border: 1px solid var(--info); 
+}
