@@ -67,6 +67,12 @@ function setupAuthUI() {
 
     document.getElementById("btn-google").addEventListener("click", () => {
         const provider = new GoogleAuthProvider();
+        
+        // CORREÇÃO: Força a tela de seleção de contas do Google
+        provider.setCustomParameters({
+            prompt: 'select_account'
+        });
+
         signInWithPopup(auth, provider).catch(err => errorEl.innerText = "Erro: " + err.message);
     });
 
